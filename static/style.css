@@ -1,0 +1,111 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: #f8fafc;
+    color: #1e293b;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Table styling */
+.kas-table th, .kas-table td {
+    white-space: nowrap;
+}
+
+/* Pos Color Themes */
+.pos-kas-bg { background-color: #f0fdf4; }
+.pos-kas-border { border-color: #bbf7d0; }
+.pos-kas-text { color: #166534; }
+.pos-kas-header { background-color: #dcfce7; color: #14532d; }
+
+.pos-ikrom-bg { background-color: #eff6ff; }
+.pos-ikrom-border { border-color: #bfdbfe; }
+.pos-ikrom-text { color: #1e40af; }
+.pos-ikrom-header { background-color: #dbeafe; color: #1e3a8a; }
+
+.pos-pen-bg { background-color: #fffbeb; }
+.pos-pen-border { border-color: #fde68a; }
+.pos-pen-text { color: #92400e; }
+.pos-pen-header { background-color: #fef3c7; color: #78350f; }
+
+.pos-total-bg { background-color: #faf5ff; }
+.pos-total-border { border-color: #e9d5ff; }
+.pos-total-text { color: #6b21a8; }
+.pos-total-header { background-color: #f3e8ff; color: #581c87; }
+
+/* Transitions */
+.fade-enter-active, .fade-leave-active {
+    transition: opacity 0.2s ease;
+}
+.fade-enter-from, .fade-leave-to {
+    opacity: 0;
+}
+
+/* Print Specific Styles */
+@media print {
+    body {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        font-size: 10pt;
+    }
+
+    .no-print, header, nav, .filter-toolbar, .action-buttons, .modal-backdrop, .toast, .swal2-container {
+        display: none !important;
+    }
+
+    .print-only {
+        display: block !important;
+    }
+
+    #print-section {
+        display: block !important;
+        position: static !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .print-table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+    }
+
+    .print-table th, .print-table td {
+        border: 1px solid #333333 !important;
+        padding: 4px 6px !important;
+        font-size: 9pt !important;
+        color: #000000 !important;
+    }
+
+    .print-table th {
+        background-color: #e2e8f0 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    @page {
+        size: landscape;
+        margin: 10mm;
+    }
+}
+
+@media screen {
+    .print-only {
+        display: none;
+    }
+}
