@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aplikasi Kas Terpadu (Kas, Ikrom, Pen)</title>
+    <title>Aplikasi Buku Kas & Dana Ikrom</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -48,10 +48,10 @@
                             </div>
                             <div>
                                 <h1 class="font-bold text-lg leading-tight text-slate-900 flex items-center gap-2">
-                                    SI-KAS TERPADU
+                                    SI-KAS & IKROM
                                     <span class="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full">v1.0</span>
                                 </h1>
-                                <p class="text-xs text-slate-500 font-medium">Buku Kas: Kas Umum &bull; Ikrom &bull; Pen</p>
+                                <p class="text-xs text-slate-500 font-medium">Buku Kas: Kas Umum &bull; Dana Ikrom</p>
                             </div>
                         </div>
 
@@ -117,8 +117,8 @@
         <!-- MAIN CONTENT CONTAINER -->
         <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-1">
             
-            <!-- 1. SUMMARY DASHBOARD CARDS (no-print) -->
-            <section class="no-print grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- 1. SUMMARY DASHBOARD CARDS (Kas & Ikrom & Total) -->
+            <section class="no-print grid grid-cols-1 md:grid-cols-3 gap-4">
                 
                 <!-- Card 1: Kas Utama -->
                 <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-all relative overflow-hidden group">
@@ -133,7 +133,7 @@
                     </div>
                     <div class="space-y-1">
                         <p class="text-xs text-slate-500 font-medium">Saldo Kas Saat Ini</p>
-                        <h3 class="text-xl font-bold text-slate-900">{{ formatRupiah(summary.saldo_kas) }}</h3>
+                        <h3 class="text-2xl font-bold text-slate-900">{{ formatRupiah(summary.saldo_kas) }}</h3>
                     </div>
                     <div class="mt-3 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs">
                         <div>
@@ -160,7 +160,7 @@
                     </div>
                     <div class="space-y-1">
                         <p class="text-xs text-slate-500 font-medium">Saldo Ikrom (Honor/Bisaroh)</p>
-                        <h3 class="text-xl font-bold text-slate-900">{{ formatRupiah(summary.saldo_ikrom) }}</h3>
+                        <h3 class="text-2xl font-bold text-slate-900">{{ formatRupiah(summary.saldo_ikrom) }}</h3>
                     </div>
                     <div class="mt-3 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs">
                         <div>
@@ -174,34 +174,7 @@
                     </div>
                 </div>
 
-                <!-- Card 3: Dana Pen -->
-                <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-all relative overflow-hidden group">
-                    <div class="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="text-xs font-bold uppercase tracking-wider text-amber-700 bg-amber-100/70 px-2.5 py-1 rounded-md">
-                            <i class="fa-solid fa-book-open-reader mr-1"></i> Dana Pen
-                        </span>
-                        <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
-                            <i class="fa-solid fa-school text-sm"></i>
-                        </div>
-                    </div>
-                    <div class="space-y-1">
-                        <p class="text-xs text-slate-500 font-medium">Saldo Pendidikan / Pen</p>
-                        <h3 class="text-xl font-bold text-slate-900">{{ formatRupiah(summary.saldo_pen) }}</h3>
-                    </div>
-                    <div class="mt-3 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs">
-                        <div>
-                            <span class="text-slate-400 block">Masuk</span>
-                            <span class="font-semibold text-amber-600">+{{ formatRupiah(summary.total_pen_in) }}</span>
-                        </div>
-                        <div>
-                            <span class="text-slate-400 block">Keluar</span>
-                            <span class="font-semibold text-red-500">-{{ formatRupiah(summary.total_pen_out) }}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Card 4: Total Saldo Gabungan -->
+                <!-- Card 3: Total Saldo Gabungan -->
                 <div class="bg-gradient-to-br from-purple-900 to-indigo-900 text-white rounded-2xl p-5 shadow-md shadow-purple-900/20 relative overflow-hidden group">
                     <div class="absolute top-0 right-0 w-28 h-28 bg-white/5 rounded-bl-full -mr-6 -mt-6"></div>
                     <div class="flex items-center justify-between mb-3">
@@ -213,7 +186,7 @@
                         </div>
                     </div>
                     <div class="space-y-1">
-                        <p class="text-xs text-purple-200 font-medium">Total Akumulasi Seluruh Pos</p>
+                        <p class="text-xs text-purple-200 font-medium">Total Akumulasi (Kas + Ikrom)</p>
                         <h3 class="text-2xl font-extrabold tracking-tight">{{ formatRupiah(summary.total_saldo) }}</h3>
                     </div>
                     <div class="mt-3 pt-3 border-t border-white/10 grid grid-cols-2 gap-2 text-xs text-purple-200">
@@ -267,10 +240,9 @@
 
                             <!-- Pos Filter Dropdown -->
                             <select v-model="filters.pos" @change="fetchTransactions" class="text-xs bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg font-medium text-slate-700 focus:outline-hidden focus:ring-2 focus:ring-emerald-500">
-                                <option value="all">Semua Pos (Kas, Ikrom, Pen)</option>
+                                <option value="all">Semua Pos (Kas & Ikrom)</option>
                                 <option value="kas">Pos Kas Utama Saja</option>
                                 <option value="ikrom">Pos Dana Ikrom Saja</option>
-                                <option value="pen">Pos Dana Pen Saja</option>
                             </select>
 
                             <!-- Category Filter Dropdown -->
@@ -293,7 +265,7 @@
                     </div>
                 </section>
 
-                <!-- 3. MULTI-COLUMN LEDGER TABLE -->
+                <!-- 3. MULTI-COLUMN LEDGER TABLE (Kas & Ikrom) -->
                 <section class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
                     <div class="overflow-x-auto">
                         <table class="kas-table w-full text-left border-collapse text-xs">
@@ -303,7 +275,7 @@
                                     <th rowspan="2" class="py-3 px-3 text-center border-r border-slate-200 w-10">No</th>
                                     <th rowspan="2" class="py-3 px-3 border-r border-slate-200 w-24">Tanggal</th>
                                     <th rowspan="2" class="py-3 px-3 border-r border-slate-200 w-24">No. Bukti</th>
-                                    <th rowspan="2" class="py-3 px-4 border-r border-slate-200 min-w-[200px]">Uraian / Keterangan</th>
+                                    <th rowspan="2" class="py-3 px-4 border-r border-slate-200 min-w-[220px]">Uraian / Keterangan</th>
                                     <th rowspan="2" class="py-3 px-3 border-r border-slate-200 w-28">Kategori</th>
                                     
                                     <!-- KAS Group Header -->
@@ -314,11 +286,6 @@
                                     <!-- IKROM Group Header -->
                                     <th colspan="3" class="py-2 px-2 text-center border-r border-blue-200 pos-ikrom-header">
                                         <i class="fa-solid fa-hand-holding-heart mr-1"></i> POS DANA IKROM
-                                    </th>
-                                    
-                                    <!-- PEN Group Header -->
-                                    <th colspan="3" class="py-2 px-2 text-center border-r border-amber-200 pos-pen-header">
-                                        <i class="fa-solid fa-book-open-reader mr-1"></i> POS DANA PEN
                                     </th>
 
                                     <!-- TOTAL & ACTION -->
@@ -337,25 +304,20 @@
                                     <th class="py-2 px-2 text-right border-r border-blue-100 bg-blue-50/50 text-blue-800">Masuk</th>
                                     <th class="py-2 px-2 text-right border-r border-blue-100 bg-blue-50/50 text-red-700">Keluar</th>
                                     <th class="py-2 px-2 text-right border-r border-blue-200 bg-blue-100/40 text-slate-800 font-bold">Saldo Ikrom</th>
-
-                                    <!-- PEN Columns -->
-                                    <th class="py-2 px-2 text-right border-r border-amber-100 bg-amber-50/50 text-amber-800">Masuk</th>
-                                    <th class="py-2 px-2 text-right border-r border-amber-100 bg-amber-50/50 text-red-700">Keluar</th>
-                                    <th class="py-2 px-2 text-right border-r border-amber-200 bg-amber-100/40 text-slate-800 font-bold">Saldo Pen</th>
                                 </tr>
                             </thead>
 
                             <!-- Table Body -->
                             <tbody class="divide-y divide-slate-100">
                                 <tr v-if="loading">
-                                    <td colspan="16" class="py-12 text-center text-slate-400">
+                                    <td colspan="13" class="py-12 text-center text-slate-400">
                                         <i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2 text-emerald-600"></i>
                                         <p class="text-sm font-medium">Memuat data transaksi...</p>
                                     </td>
                                 </tr>
 
                                 <tr v-else-if="transactions.length === 0">
-                                    <td colspan="16" class="py-12 text-center text-slate-400">
+                                    <td colspan="13" class="py-12 text-center text-slate-400">
                                         <i class="fa-regular fa-folder-open text-3xl mb-2 text-slate-300"></i>
                                         <p class="text-sm font-medium text-slate-600">Tidak ada data transaksi yang ditemukan</p>
                                         <p class="text-xs text-slate-400 mt-1">Coba ubah filter periode atau klik "+ Tambah Transaksi"</p>
@@ -396,17 +358,6 @@
                                         {{ formatRupiah(t.ikrom_balance) }}
                                     </td>
 
-                                    <!-- PEN Values -->
-                                    <td class="py-2.5 px-2 text-right border-r border-amber-50 font-medium" :class="t.pen_in > 0 ? 'text-amber-600 bg-amber-50/20' : 'text-slate-300'">
-                                        {{ t.pen_in > 0 ? formatRupiah(t.pen_in) : '-' }}
-                                    </td>
-                                    <td class="py-2.5 px-2 text-right border-r border-amber-50 font-medium" :class="t.pen_out > 0 ? 'text-red-500 bg-red-50/20' : 'text-slate-300'">
-                                        {{ t.pen_out > 0 ? formatRupiah(t.pen_out) : '-' }}
-                                    </td>
-                                    <td class="py-2.5 px-2 text-right border-r border-slate-200 font-bold text-slate-800 bg-amber-50/30">
-                                        {{ formatRupiah(t.pen_balance) }}
-                                    </td>
-
                                     <!-- TOTAL SALDO -->
                                     <td class="py-2.5 px-3 text-right border-r border-slate-200 font-extrabold text-purple-900 bg-purple-50/40">
                                         {{ formatRupiah(t.total_balance) }}
@@ -442,11 +393,6 @@
                                     <td class="py-3 px-2 text-right border-r border-blue-200 text-red-600">{{ formatRupiah(tableTotals.ikromOut) }}</td>
                                     <td class="py-3 px-2 text-right border-r border-slate-300 bg-blue-100/60 text-blue-900">{{ formatRupiah(tableTotals.finalIkromBalance) }}</td>
 
-                                    <!-- PEN Totals -->
-                                    <td class="py-3 px-2 text-right border-r border-amber-200 text-amber-700">{{ formatRupiah(tableTotals.penIn) }}</td>
-                                    <td class="py-3 px-2 text-right border-r border-amber-200 text-red-600">{{ formatRupiah(tableTotals.penOut) }}</td>
-                                    <td class="py-3 px-2 text-right border-r border-slate-300 bg-amber-100/60 text-amber-900">{{ formatRupiah(tableTotals.finalPenBalance) }}</td>
-
                                     <!-- GRAND TOTAL -->
                                     <td class="py-3 px-3 text-right bg-purple-100 text-purple-950 text-sm font-extrabold border-r border-slate-200">
                                         {{ formatRupiah(tableTotals.finalTotalBalance) }}
@@ -468,7 +414,7 @@
                         <div class="flex items-center justify-between mb-4">
                             <div>
                                 <h3 class="font-bold text-slate-900">Pemasukan vs Pengeluaran per Bulan</h3>
-                                <p class="text-xs text-slate-500">Perbandingan arus kas per pos (Kas, Ikrom, Pen)</p>
+                                <p class="text-xs text-slate-500">Perbandingan arus kas per pos (Kas Utama & Dana Ikrom)</p>
                             </div>
                             <span class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-md font-medium">12 Bulan Terakhir</span>
                         </div>
@@ -482,7 +428,7 @@
                         <div class="flex items-center justify-between mb-4">
                             <div>
                                 <h3 class="font-bold text-slate-900">Komposisi Saldo</h3>
-                                <p class="text-xs text-slate-500">Distribusi kas saat ini</p>
+                                <p class="text-xs text-slate-500">Distribusi kas saat ini (Kas vs Ikrom)</p>
                             </div>
                         </div>
                         <div class="h-80 w-full flex items-center justify-center">
@@ -510,10 +456,10 @@
         <!-- FOOTER (no-print) -->
         <footer class="no-print bg-white border-t border-slate-200 py-4 mt-auto">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
-                <p>&copy; 2026 Aplikasi Kas Terpadu. Backend Golang + Vue 3 Frontend.</p>
+                <p>&copy; 2026 Aplikasi Buku Kas & Dana Ikrom. Backend Golang + Vue 3 Frontend.</p>
                 <div class="flex items-center space-x-4">
                     <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Database SQLite WAL Active</span>
-                    <span>Multi-Pos: Kas &bull; Ikrom &bull; Pen</span>
+                    <span>Multi-Pos: Kas Utama &bull; Dana Ikrom</span>
                 </div>
             </div>
         </footer>
@@ -580,7 +526,7 @@
                         </div>
                         <div class="sm:col-span-2">
                             <label class="block text-xs font-bold text-slate-700 mb-1">Keterangan / Uraian <span class="text-red-500">*</span></label>
-                            <input type="text" v-model="form.description" required placeholder="Contoh: Infaq Jumat / Pembayaran Honor Ustadz" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-hidden">
+                            <input type="text" v-model="form.description" required placeholder="Contoh: Infaq Jamaah / Pembayaran Honor Ustadz" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-hidden">
                         </div>
                     </div>
 
@@ -607,7 +553,6 @@
                                 <select v-model="singleForm.pos" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden">
                                     <option value="kas">💼 Kas Utama (Kas)</option>
                                     <option value="ikrom">🤲 Dana Ikrom (Bisaroh)</option>
-                                    <option value="pen">📚 Dana Pen (Pendidikan)</option>
                                 </select>
                             </div>
                         </div>
@@ -620,7 +565,7 @@
                                        class="w-full bg-white border border-slate-300 rounded-lg pl-10 pr-4 py-2 text-base font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden">
                             </div>
                             <p class="text-xs text-emerald-700 font-semibold mt-1.5" v-if="singleForm.amount > 0">
-                                Terbilang / Format: {{ formatRupiah(singleForm.amount) }}
+                                Format: {{ formatRupiah(singleForm.amount) }}
                             </p>
                         </div>
                     </div>
@@ -656,21 +601,6 @@
                             <div>
                                 <label class="block text-[11px] font-medium text-red-700 mb-0.5">Ikrom Keluar (Rp)</label>
                                 <input type="number" step="any" v-model.number="form.ikrom_out" placeholder="0" class="w-full bg-white border border-blue-200 rounded-md px-2.5 py-1.5 text-xs font-semibold text-red-600">
-                            </div>
-                        </div>
-
-                        <!-- Pos Pen -->
-                        <div class="p-3 bg-amber-50/60 rounded-lg border border-amber-200/80 grid grid-cols-2 gap-3">
-                            <div class="col-span-2 flex items-center justify-between">
-                                <span class="text-xs font-bold text-amber-800"><i class="fa-solid fa-book-open-reader mr-1"></i> Pos Dana Pen</span>
-                            </div>
-                            <div>
-                                <label class="block text-[11px] font-medium text-amber-800 mb-0.5">Pen Masuk (Rp)</label>
-                                <input type="number" step="any" v-model.number="form.pen_in" placeholder="0" class="w-full bg-white border border-amber-200 rounded-md px-2.5 py-1.5 text-xs font-semibold">
-                            </div>
-                            <div>
-                                <label class="block text-[11px] font-medium text-red-700 mb-0.5">Pen Keluar (Rp)</label>
-                                <input type="number" step="any" v-model.number="form.pen_out" placeholder="0" class="w-full bg-white border border-amber-200 rounded-md px-2.5 py-1.5 text-xs font-semibold text-red-600">
                             </div>
                         </div>
                     </div>
@@ -736,7 +666,7 @@
                 <div class="px-6 py-4 bg-blue-900 text-white flex items-center justify-between">
                     <div class="flex items-center space-x-2">
                         <i class="fa-solid fa-print text-blue-300"></i>
-                        <h3 class="font-bold text-base">Cetak Laporan Buku Kas (PDF / Print)</h3>
+                        <h3 class="font-bold text-base">Cetak Laporan Buku Kas & Dana Ikrom (PDF / Print)</h3>
                     </div>
                     <button @click="showPrintModal = false" class="text-blue-300 hover:text-white">
                         <i class="fa-solid fa-xmark text-lg"></i>
@@ -826,14 +756,8 @@
                             <td style="text-align: right;">{{ formatRupiah(summary.total_ikrom_out) }}</td>
                             <td style="text-align: right; font-weight: bold;">{{ formatRupiah(summary.saldo_ikrom) }}</td>
                         </tr>
-                        <tr>
-                            <td><b>3. Pos Dana Pen (Pendidikan)</b></td>
-                            <td style="text-align: right;">{{ formatRupiah(summary.total_pen_in) }}</td>
-                            <td style="text-align: right;">{{ formatRupiah(summary.total_pen_out) }}</td>
-                            <td style="text-align: right; font-weight: bold;">{{ formatRupiah(summary.saldo_pen) }}</td>
-                        </tr>
                         <tr style="background-color: #f8fafc; font-weight: bold;">
-                            <td>GRAND TOTAL KESELURUHAN</td>
+                            <td>GRAND TOTAL KESELURUHAN (KAS + IKROM)</td>
                             <td style="text-align: right;">{{ formatRupiah(summary.total_masuk) }}</td>
                             <td style="text-align: right;">{{ formatRupiah(summary.total_keluar) }}</td>
                             <td style="text-align: right;">{{ formatRupiah(summary.total_saldo) }}</td>
@@ -851,13 +775,11 @@
                         <th rowspan="2">No. Bukti</th>
                         <th rowspan="2" style="text-align: left;">Keterangan</th>
                         <th rowspan="2">Kategori</th>
-                        <th colspan="3">KAS UTAMA</th>
-                        <th colspan="3">DANA IKROM</th>
-                        <th colspan="3">DANA PEN</th>
+                        <th colspan="3">POS KAS UTAMA</th>
+                        <th colspan="3">POS DANA IKROM</th>
                         <th rowspan="2">TOTAL SALDO</th>
                     </tr>
                     <tr style="background-color: #f8fafc; font-size: 8pt;">
-                        <th>Masuk</th><th>Keluar</th><th>Saldo</th>
                         <th>Masuk</th><th>Keluar</th><th>Saldo</th>
                         <th>Masuk</th><th>Keluar</th><th>Saldo</th>
                     </tr>
@@ -875,9 +797,6 @@
                         <td style="text-align: right;">{{ t.ikrom_in > 0 ? formatRupiah(t.ikrom_in) : '-' }}</td>
                         <td style="text-align: right;">{{ t.ikrom_out > 0 ? formatRupiah(t.ikrom_out) : '-' }}</td>
                         <td style="text-align: right; font-weight: bold;">{{ formatRupiah(t.ikrom_balance) }}</td>
-                        <td style="text-align: right;">{{ t.pen_in > 0 ? formatRupiah(t.pen_in) : '-' }}</td>
-                        <td style="text-align: right;">{{ t.pen_out > 0 ? formatRupiah(t.pen_out) : '-' }}</td>
-                        <td style="text-align: right; font-weight: bold;">{{ formatRupiah(t.pen_balance) }}</td>
                         <td style="text-align: right; font-weight: bold;">{{ formatRupiah(t.total_balance) }}</td>
                     </tr>
                 </tbody>
@@ -890,9 +809,6 @@
                         <td style="text-align: right;">{{ formatRupiah(tableTotals.ikromIn) }}</td>
                         <td style="text-align: right;">{{ formatRupiah(tableTotals.ikromOut) }}</td>
                         <td style="text-align: right;">{{ formatRupiah(tableTotals.finalIkromBalance) }}</td>
-                        <td style="text-align: right;">{{ formatRupiah(tableTotals.penIn) }}</td>
-                        <td style="text-align: right;">{{ formatRupiah(tableTotals.penOut) }}</td>
-                        <td style="text-align: right;">{{ formatRupiah(tableTotals.finalPenBalance) }}</td>
                         <td style="text-align: right;">{{ formatRupiah(tableTotals.finalTotalBalance) }}</td>
                     </tr>
                 </tfoot>

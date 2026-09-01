@@ -287,7 +287,7 @@ func DeleteCategoryHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// ExportCSV handles GET /api/export/csv
+// ExportCSV handles GET /api/export/csv for Kas & Ikrom
 func ExportCSV(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
@@ -307,9 +307,9 @@ func ExportCSV(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filename := "buku_kas_tabelar.csv"
+	filename := "buku_kas_dan_ikrom.csv"
 	if startDate != "" && endDate != "" {
-		filename = fmt.Sprintf("buku_kas_%s_sd_%s.csv", startDate, endDate)
+		filename = fmt.Sprintf("buku_kas_ikrom_%s_sd_%s.csv", startDate, endDate)
 	}
 
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
@@ -321,27 +321,23 @@ func ExportCSV(w http.ResponseWriter, r *http.Request) {
 	writer := csv.NewWriter(w)
 	defer writer.Flush()
 
-	// CSV Headers
+	// CSV Headers for Kas & Ikrom
 	headers := []string{
 		"No", "Tanggal", "No. Bukti", "Keterangan", "Kategori",
 		"Kas Masuk", "Kas Keluar", "Saldo Kas",
 		"Ikrom Masuk", "Ikrom Keluar", "Saldo Ikrom",
-		"Pen Masuk", "Pen Keluar", "Saldo Pen",
 		"Total Saldo Akumulasi",
 	}
 	_ = writer.Write(headers)
 
 	var totalKasIn, totalKasOut float64
 	var totalIkromIn, totalIkromOut float64
-	var totalPenIn, totalPenOut float64
 
 	for i, t := range transactions {
 		totalKasIn += t.KasIn
 		totalKasOut += t.KasOut
 		totalIkromIn += t.IkromIn
 		totalIkromOut += t.IkromOut
-		totalPenIn += t.PenIn
-		totalPenOut += t.PenOut
 
 		row := []string{
 			strconv.Itoa(i + 1),
@@ -355,9 +351,6 @@ func ExportCSV(w http.ResponseWriter, r *http.Request) {
 			fmt.Sprintf("%.0f", t.IkromIn),
 			fmt.Sprintf("%.0f", t.IkromOut),
 			fmt.Sprintf("%.0f", t.IkromBalance),
-			fmt.Sprintf("%.0f", t.PenIn),
-			fmt.Sprintf("%.0f", t.PenOut),
-			fmt.Sprintf("%.0f", t.PenBalance),
 			fmt.Sprintf("%.0f", t.TotalBalance),
 		}
 		_ = writer.Write(row)
@@ -366,8 +359,7 @@ func ExportCSV(w http.ResponseWriter, r *http.Request) {
 	// Summary Footer Row
 	finalKasBal := totalKasIn - totalKasOut
 	finalIkromBal := totalIkromIn - totalIkromOut
-	finalPenBal := totalPenIn - totalPenOut
-	finalTotalBal := finalKasBal + finalIkromBal + finalPenBal
+	finalTotalBal := finalKasBal + finalIkromBal
 
 	footerRow := []string{
 		"TOTAL", "", "", "TOTAL AKUMULASI PERIODE INI", "",
@@ -377,9 +369,6 @@ func ExportCSV(w http.ResponseWriter, r *http.Request) {
 		fmt.Sprintf("%.0f", totalIkromIn),
 		fmt.Sprintf("%.0f", totalIkromOut),
 		fmt.Sprintf("%.0f", finalIkromBal),
-		fmt.Sprintf("%.0f", totalPenIn),
-		fmt.Sprintf("%.0f", totalPenOut),
-		fmt.Sprintf("%.0f", finalPenBal),
 		fmt.Sprintf("%.0f", finalTotalBal),
 	}
 	_ = writer.Write(footerRow)
@@ -399,7 +388,7 @@ func SeedData(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"success": true,
-		"message": "Data contoh Kas, Ikrom, dan Pen berhasil dimasukkan",
+		"message": "Data contoh Kas dan Ikrom berhasil dimasukkan",
 	})
 }
 

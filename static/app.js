@@ -7,11 +7,9 @@ createApp({
         const summary = ref({
             total_kas_in: 0, total_kas_out: 0, saldo_kas: 0,
             total_ikrom_in: 0, total_ikrom_out: 0, saldo_ikrom: 0,
-            total_pen_in: 0, total_pen_out: 0, saldo_pen: 0,
             total_masuk: 0, total_keluar: 0, total_saldo: 0,
             period_kas_in: 0, period_kas_out: 0,
             period_ikrom_in: 0, period_ikrom_out: 0,
-            period_pen_in: 0, period_pen_out: 0,
             period_masuk: 0, period_keluar: 0,
             transaction_count: 0
         });
@@ -41,7 +39,7 @@ createApp({
         const inputMode = ref('single'); // 'single' (Cepat) or 'multi' (Tabelar Lengkap)
         const singleForm = reactive({
             type: 'in',      // 'in' or 'out'
-            pos: 'kas',      // 'kas', 'ikrom', 'pen'
+            pos: 'kas',      // 'kas', 'ikrom'
             amount: ''
         });
 
@@ -53,9 +51,7 @@ createApp({
             kas_in: 0,
             kas_out: 0,
             ikrom_in: 0,
-            ikrom_out: 0,
-            pen_in: 0,
-            pen_out: 0
+            ikrom_out: 0
         });
 
         const newCategory = reactive({
@@ -68,8 +64,8 @@ createApp({
         const reportSettings = reactive({
             orgName: 'LEMBAGA / YAYASAN / PENGURUS KAS',
             address: 'Jl. Pemuda No. 123, Kota / Kabupaten',
-            title: 'LAPORAN REKAPITULASI BUKU KAS TABELAR',
-            subtitle: 'Pos Kas Umum, Dana Ikrom, dan Dana Pen',
+            title: 'LAPORAN REKAPITULASI BUKU KAS & DANA IKROM',
+            subtitle: 'Pos Kas Umum & Dana Ikrom (Bisaroh)',
             signerPlace: 'Indonesia',
             signerDate: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
             signer1Role: 'Ketua / Pimpinan',
@@ -88,11 +84,6 @@ createApp({
             if (val === undefined || val === null || isNaN(val)) return 'Rp 0';
             const num = Number(val);
             return 'Rp ' + Math.round(num).toLocaleString('id-ID');
-        };
-
-        const formatNumberInput = (val) => {
-            if (!val && val !== 0) return '';
-            return Number(val).toLocaleString('id-ID');
         };
 
         const parseNumber = (val) => {
@@ -119,36 +110,29 @@ createApp({
         const tableTotals = computed(() => {
             let kasIn = 0, kasOut = 0;
             let ikromIn = 0, ikromOut = 0;
-            let penIn = 0, penOut = 0;
 
             transactions.value.forEach(t => {
                 kasIn += t.kas_in || 0;
                 kasOut += t.kas_out || 0;
                 ikromIn += t.ikrom_in || 0;
                 ikromOut += t.ikrom_out || 0;
-                penIn += t.pen_in || 0;
-                penOut += t.pen_out || 0;
             });
 
             const kasNet = kasIn - kasOut;
             const ikromNet = ikromIn - ikromOut;
-            const penNet = penIn - penOut;
-            const totalNet = kasNet + ikromNet + penNet;
+            const totalNet = kasNet + ikromNet;
 
             const lastRow = transactions.value.length > 0 ? transactions.value[transactions.value.length - 1] : null;
             const finalKasBalance = lastRow ? lastRow.kas_balance : (summary.value.saldo_kas || 0);
             const finalIkromBalance = lastRow ? lastRow.ikrom_balance : (summary.value.saldo_ikrom || 0);
-            const finalPenBalance = lastRow ? lastRow.pen_balance : (summary.value.saldo_pen || 0);
             const finalTotalBalance = lastRow ? lastRow.total_balance : (summary.value.total_saldo || 0);
 
             return {
                 kasIn, kasOut, kasNet,
                 ikromIn, ikromOut, ikromNet,
-                penIn, penOut, penNet,
                 totalNet,
                 finalKasBalance,
                 finalIkromBalance,
-                finalPenBalance,
                 finalTotalBalance
             };
         });
@@ -288,8 +272,6 @@ createApp({
             form.kas_out = 0;
             form.ikrom_in = 0;
             form.ikrom_out = 0;
-            form.pen_in = 0;
-            form.pen_out = 0;
 
             singleForm.type = 'in';
             singleForm.pos = 'kas';
@@ -301,7 +283,7 @@ createApp({
         const openEditModal = (t) => {
             isEditing.value = true;
             editingId.value = t.id;
-            inputMode.value = 'multi'; // default multi for full fidelity edit
+            inputMode.value = 'multi';
 
             form.date = t.date;
             form.ref_no = t.ref_no || '';
@@ -311,8 +293,6 @@ createApp({
             form.kas_out = t.kas_out || 0;
             form.ikrom_in = t.ikrom_in || 0;
             form.ikrom_out = t.ikrom_out || 0;
-            form.pen_in = t.pen_in || 0;
-            form.pen_out = t.pen_out || 0;
 
             showModal.value = true;
         };
@@ -334,15 +314,12 @@ createApp({
                 return;
             }
 
-            // Sync single input mode to form values if single mode is active
             if (inputMode.value === 'single') {
                 const amount = parseNumber(singleForm.amount);
                 form.kas_in = 0;
                 form.kas_out = 0;
                 form.ikrom_in = 0;
                 form.ikrom_out = 0;
-                form.pen_in = 0;
-                form.pen_out = 0;
 
                 if (singleForm.pos === 'kas') {
                     if (singleForm.type === 'in') form.kas_in = amount;
@@ -350,21 +327,15 @@ createApp({
                 } else if (singleForm.pos === 'ikrom') {
                     if (singleForm.type === 'in') form.ikrom_in = amount;
                     else form.ikrom_out = amount;
-                } else if (singleForm.pos === 'pen') {
-                    if (singleForm.type === 'in') form.pen_in = amount;
-                    else form.pen_out = amount;
                 }
             } else {
-                // Ensure numbers
                 form.kas_in = parseNumber(form.kas_in);
                 form.kas_out = parseNumber(form.kas_out);
                 form.ikrom_in = parseNumber(form.ikrom_in);
                 form.ikrom_out = parseNumber(form.ikrom_out);
-                form.pen_in = parseNumber(form.pen_in);
-                form.pen_out = parseNumber(form.pen_out);
             }
 
-            const totalNominal = (form.kas_in + form.kas_out + form.ikrom_in + form.ikrom_out + form.pen_in + form.pen_out);
+            const totalNominal = (form.kas_in + form.kas_out + form.ikrom_in + form.ikrom_out);
             if (totalNominal <= 0) {
                 toast('Harap masukkan nominal transaksi (tidak boleh Rp 0)', 'warning');
                 return;
@@ -443,7 +414,7 @@ createApp({
         const seedDemoData = async () => {
             Swal.fire({
                 title: 'Muat Data Contoh?',
-                text: 'Data saat ini akan digantikan dengan data simulasi Kas, Ikrom, dan Pen.',
+                text: 'Data saat ini akan digantikan dengan data simulasi Kas dan Dana Ikrom.',
                 icon: 'question',
                 showCancelButton: true,
                 confirmButtonColor: '#059669',
@@ -557,7 +528,7 @@ createApp({
             });
         };
 
-        // Chart.js Visualizations
+        // Chart.js Visualizations for Kas and Ikrom
         const renderCharts = () => {
             if (!chartData.value) return;
 
@@ -571,8 +542,6 @@ createApp({
                 const kasOutData = chartData.value.monthly.map(m => m.kas_out);
                 const ikromInData = chartData.value.monthly.map(m => m.ikrom_in);
                 const ikromOutData = chartData.value.monthly.map(m => m.ikrom_out);
-                const penInData = chartData.value.monthly.map(m => m.pen_in);
-                const penOutData = chartData.value.monthly.map(m => m.pen_out);
 
                 monthlyChartInstance = new Chart(monthlyCtx, {
                     type: 'bar',
@@ -582,9 +551,7 @@ createApp({
                             { label: 'Kas Masuk', data: kasInData, backgroundColor: '#10b981' },
                             { label: 'Kas Keluar', data: kasOutData, backgroundColor: '#f87171' },
                             { label: 'Ikrom Masuk', data: ikromInData, backgroundColor: '#3b82f6' },
-                            { label: 'Ikrom Keluar', data: ikromOutData, backgroundColor: '#93c5fd' },
-                            { label: 'Pen Masuk', data: penInData, backgroundColor: '#f59e0b' },
-                            { label: 'Pen Keluar', data: penOutData, backgroundColor: '#fde68a' }
+                            { label: 'Ikrom Keluar', data: ikromOutData, backgroundColor: '#93c5fd' }
                         ]
                     },
                     options: {
@@ -609,19 +576,19 @@ createApp({
                 });
             }
 
-            // Pos Distribution Doughnut Chart
+            // Pos Distribution Doughnut Chart: Kas vs Ikrom
             const posCtx = document.getElementById('posChart');
             if (posCtx) {
                 if (posChartInstance) posChartInstance.destroy();
 
-                const pos = chartData.value.pos_distribution || { kas: 0, ikrom: 0, pen: 0 };
+                const pos = chartData.value.pos_distribution || { kas: 0, ikrom: 0 };
                 posChartInstance = new Chart(posCtx, {
                     type: 'doughnut',
                     data: {
-                        labels: ['Saldo Kas Utama', 'Saldo Dana Ikrom', 'Saldo Dana Pen'],
+                        labels: ['Saldo Kas Utama', 'Saldo Dana Ikrom'],
                         datasets: [{
-                            data: [Math.max(0, pos.kas), Math.max(0, pos.ikrom), Math.max(0, pos.pen)],
-                            backgroundColor: ['#10b981', '#3b82f6', '#f59e0b']
+                            data: [Math.max(0, pos.kas), Math.max(0, pos.ikrom)],
+                            backgroundColor: ['#10b981', '#3b82f6']
                         }]
                     },
                     options: {
@@ -644,7 +611,6 @@ createApp({
             if (trendCtx) {
                 if (trendChartInstance) trendChartInstance.destroy();
 
-                let running = 0;
                 const trendLabels = [];
                 const trendValues = [];
 
@@ -658,7 +624,7 @@ createApp({
                     data: {
                         labels: trendLabels.length > 0 ? trendLabels : ['Data Kosong'],
                         datasets: [{
-                            label: 'Total Saldo Akumulasi',
+                            label: 'Total Saldo Akumulasi (Kas + Ikrom)',
                             data: trendValues.length > 0 ? trendValues : [0],
                             borderColor: '#8b5cf6',
                             backgroundColor: 'rgba(139, 92, 246, 0.1)',
@@ -699,7 +665,6 @@ createApp({
             }
         });
 
-        // Search debounce
         let searchTimeout = null;
         watch(searchInput, () => {
             clearTimeout(searchTimeout);
@@ -733,7 +698,6 @@ createApp({
             reportSettings,
             tableTotals,
             formatRupiah,
-            formatNumberInput,
             formatDate,
             setPeriod,
             resetFilters,

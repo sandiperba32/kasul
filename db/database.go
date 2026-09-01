@@ -48,7 +48,7 @@ func createTables() error {
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			name TEXT NOT NULL UNIQUE,
 			type TEXT NOT NULL DEFAULT 'both', -- 'in', 'out', 'both'
-			pos TEXT NOT NULL DEFAULT 'all'    -- 'kas', 'ikrom', 'pen', 'all'
+			pos TEXT NOT NULL DEFAULT 'all'    -- 'kas', 'ikrom', 'all'
 		);`,
 		`CREATE TABLE IF NOT EXISTS transactions (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -60,8 +60,6 @@ func createTables() error {
 			kas_out REAL NOT NULL DEFAULT 0.0,
 			ikrom_in REAL NOT NULL DEFAULT 0.0,
 			ikrom_out REAL NOT NULL DEFAULT 0.0,
-			pen_in REAL NOT NULL DEFAULT 0.0,
-			pen_out REAL NOT NULL DEFAULT 0.0,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);`,
@@ -94,16 +92,14 @@ func seedDefaultCategories() error {
 	}{
 		{"Infaq / Shodaqoh", "in", "kas"},
 		{"Donasi Khusus", "in", "kas"},
-		{"Iuran / SPP", "in", "pen"},
 		{"Dana Bantuan Operasional", "in", "kas"},
 		{"Penerimaan Ikrom / Bisaroh", "in", "ikrom"},
 		{"Bisaroh Guru / Ustadz", "out", "ikrom"},
 		{"Honor Karyawan / Pengurus", "out", "ikrom"},
-		{"Pengadaan ATK & Buku", "out", "pen"},
-		{"Kegiatan Pendidikan / Santri", "out", "pen"},
-		{"Pemeliharaan & Pembangunan", "out", "pen"},
 		{"Operasional & Listrik / Air", "out", "kas"},
 		{"Konsumsi & Jamuan", "out", "kas"},
+		{"Pengadaan ATK & Perlengkapan", "out", "kas"},
+		{"Pemeliharaan Fasilitas", "out", "kas"},
 		{"Lain-lain", "both", "all"},
 	}
 
@@ -120,24 +116,23 @@ func seedDefaultCategories() error {
 }
 
 // GetInitialBalance calculates the balance of all transactions before a given date
-func GetInitialBalance(beforeDate string) (kasBal, ikromBal, penBal float64, err error) {
+func GetInitialBalance(beforeDate string) (kasBal, ikromBal float64, err error) {
 	if beforeDate == "" {
-		return 0, 0, 0, nil
+		return 0, 0, nil
 	}
 
 	query := `
 		SELECT 
 			COALESCE(SUM(kas_in - kas_out), 0),
-			COALESCE(SUM(ikrom_in - ikrom_out), 0),
-			COALESCE(SUM(pen_in - pen_out), 0)
+			COALESCE(SUM(ikrom_in - ikrom_out), 0)
 		FROM transactions
 		WHERE date < ?
 	`
-	err = DB.QueryRow(query, beforeDate).Scan(&kasBal, &ikromBal, &penBal)
-	return kasBal, ikromBal, penBal, err
+	err = DB.QueryRow(query, beforeDate).Scan(&kasBal, &ikromBal)
+	return kasBal, ikromBal, err
 }
 
-// GetAllTransactions retrieves filtered transactions and calculates accurate running balances
+// GetAllTransactions retrieves filtered transactions and calculates accurate running balances for Kas & Ikrom
 func GetAllTransactions(startDate, endDate, category, search, posFilter string) ([]models.Transaction, error) {
 	var conditions []string
 	var args []interface{}
@@ -165,8 +160,6 @@ func GetAllTransactions(startDate, endDate, category, search, posFilter string) 
 			conditions = append(conditions, "(kas_in > 0 OR kas_out > 0)")
 		case "ikrom":
 			conditions = append(conditions, "(ikrom_in > 0 OR ikrom_out > 0)")
-		case "pen":
-			conditions = append(conditions, "(pen_in > 0 OR pen_out > 0)")
 		}
 	}
 
@@ -175,15 +168,15 @@ func GetAllTransactions(startDate, endDate, category, search, posFilter string) 
 		whereClause = "WHERE " + strings.Join(conditions, " AND ")
 	}
 
-	// Calculate initial balance prior to startDate to make running balance continuous
-	initKas, initIkrom, initPen, err := GetInitialBalance(startDate)
+	// Calculate initial balance prior to startDate
+	initKas, initIkrom, err := GetInitialBalance(startDate)
 	if err != nil {
 		return nil, err
 	}
 
 	query := fmt.Sprintf(`
 		SELECT id, date, ref_no, description, category,
-		       kas_in, kas_out, ikrom_in, ikrom_out, pen_in, pen_out,
+		       kas_in, kas_out, ikrom_in, ikrom_out,
 		       created_at, updated_at
 		FROM transactions
 		%s
@@ -199,14 +192,13 @@ func GetAllTransactions(startDate, endDate, category, search, posFilter string) 
 	var transactions []models.Transaction
 	runningKas := initKas
 	runningIkrom := initIkrom
-	runningPen := initPen
 
 	for rows.Next() {
 		var t models.Transaction
 		var createdAt, updatedAt string
 		err := rows.Scan(
 			&t.ID, &t.Date, &t.RefNo, &t.Description, &t.Category,
-			&t.KasIn, &t.KasOut, &t.IkromIn, &t.IkromOut, &t.PenIn, &t.PenOut,
+			&t.KasIn, &t.KasOut, &t.IkromIn, &t.IkromOut,
 			&createdAt, &updatedAt,
 		)
 		if err != nil {
@@ -218,12 +210,10 @@ func GetAllTransactions(startDate, endDate, category, search, posFilter string) 
 
 		runningKas += (t.KasIn - t.KasOut)
 		runningIkrom += (t.IkromIn - t.IkromOut)
-		runningPen += (t.PenIn - t.PenOut)
 
 		t.KasBalance = runningKas
 		t.IkromBalance = runningIkrom
-		t.PenBalance = runningPen
-		t.TotalBalance = runningKas + runningIkrom + runningPen
+		t.TotalBalance = runningKas + runningIkrom
 
 		transactions = append(transactions, t)
 	}
@@ -239,7 +229,7 @@ func GetAllTransactions(startDate, endDate, category, search, posFilter string) 
 func GetTransactionByID(id int64) (*models.Transaction, error) {
 	query := `
 		SELECT id, date, ref_no, description, category,
-		       kas_in, kas_out, ikrom_in, ikrom_out, pen_in, pen_out,
+		       kas_in, kas_out, ikrom_in, ikrom_out,
 		       created_at, updated_at
 		FROM transactions
 		WHERE id = ?
@@ -248,7 +238,7 @@ func GetTransactionByID(id int64) (*models.Transaction, error) {
 	var createdAt, updatedAt string
 	err := DB.QueryRow(query, id).Scan(
 		&t.ID, &t.Date, &t.RefNo, &t.Description, &t.Category,
-		&t.KasIn, &t.KasOut, &t.IkromIn, &t.IkromOut, &t.PenIn, &t.PenOut,
+		&t.KasIn, &t.KasOut, &t.IkromIn, &t.IkromOut,
 		&createdAt, &updatedAt,
 	)
 	if err != nil {
@@ -272,13 +262,13 @@ func CreateTransaction(input models.TransactionInput) (int64, error) {
 	query := `
 		INSERT INTO transactions (
 			date, ref_no, description, category,
-			kas_in, kas_out, ikrom_in, ikrom_out, pen_in, pen_out,
+			kas_in, kas_out, ikrom_in, ikrom_out,
 			created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'), datetime('now', 'localtime'))
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'), datetime('now', 'localtime'))
 	`
 	result, err := DB.Exec(query,
 		input.Date, input.RefNo, input.Description, input.Category,
-		input.KasIn, input.KasOut, input.IkromIn, input.IkromOut, input.PenIn, input.PenOut,
+		input.KasIn, input.KasOut, input.IkromIn, input.IkromOut,
 	)
 	if err != nil {
 		return 0, err
@@ -291,13 +281,13 @@ func UpdateTransaction(id int64, input models.TransactionInput) error {
 	query := `
 		UPDATE transactions
 		SET date = ?, ref_no = ?, description = ?, category = ?,
-		    kas_in = ?, kas_out = ?, ikrom_in = ?, ikrom_out = ?, pen_in = ?, pen_out = ?,
+		    kas_in = ?, kas_out = ?, ikrom_in = ?, ikrom_out = ?,
 		    updated_at = datetime('now', 'localtime')
 		WHERE id = ?
 	`
 	_, err := DB.Exec(query,
 		input.Date, input.RefNo, input.Description, input.Category,
-		input.KasIn, input.KasOut, input.IkromIn, input.IkromOut, input.PenIn, input.PenOut,
+		input.KasIn, input.KasOut, input.IkromIn, input.IkromOut,
 		id,
 	)
 	return err
@@ -309,7 +299,7 @@ func DeleteTransaction(id int64) error {
 	return err
 }
 
-// GetSummary calculates overall and filtered totals
+// GetSummary calculates overall and filtered totals for Kas & Ikrom
 func GetSummary(startDate, endDate string) (*models.Summary, error) {
 	var s models.Summary
 
@@ -318,16 +308,14 @@ func GetSummary(startDate, endDate string) (*models.Summary, error) {
 		SELECT 
 			COALESCE(SUM(kas_in), 0), COALESCE(SUM(kas_out), 0), COALESCE(SUM(kas_in - kas_out), 0),
 			COALESCE(SUM(ikrom_in), 0), COALESCE(SUM(ikrom_out), 0), COALESCE(SUM(ikrom_in - ikrom_out), 0),
-			COALESCE(SUM(pen_in), 0), COALESCE(SUM(pen_out), 0), COALESCE(SUM(pen_in - pen_out), 0),
-			COALESCE(SUM(kas_in + ikrom_in + pen_in), 0),
-			COALESCE(SUM(kas_out + ikrom_out + pen_out), 0),
-			COALESCE(SUM((kas_in - kas_out) + (ikrom_in - ikrom_out) + (pen_in - pen_out)), 0),
+			COALESCE(SUM(kas_in + ikrom_in), 0),
+			COALESCE(SUM(kas_out + ikrom_out), 0),
+			COALESCE(SUM((kas_in - kas_out) + (ikrom_in - ikrom_out)), 0),
 			COUNT(*)
 		FROM transactions
 	`).Scan(
 		&s.TotalKasIn, &s.TotalKasOut, &s.SaldoKas,
 		&s.TotalIkromIn, &s.TotalIkromOut, &s.SaldoIkrom,
-		&s.TotalPenIn, &s.TotalPenOut, &s.SaldoPen,
 		&s.TotalMasuk, &s.TotalKeluar, &s.TotalSaldo,
 		&s.TransactionCount,
 	)
@@ -356,9 +344,8 @@ func GetSummary(startDate, endDate string) (*models.Summary, error) {
 		SELECT 
 			COALESCE(SUM(kas_in), 0), COALESCE(SUM(kas_out), 0),
 			COALESCE(SUM(ikrom_in), 0), COALESCE(SUM(ikrom_out), 0),
-			COALESCE(SUM(pen_in), 0), COALESCE(SUM(pen_out), 0),
-			COALESCE(SUM(kas_in + ikrom_in + pen_in), 0),
-			COALESCE(SUM(kas_out + ikrom_out + pen_out), 0)
+			COALESCE(SUM(kas_in + ikrom_in), 0),
+			COALESCE(SUM(kas_out + ikrom_out), 0)
 		FROM transactions
 		%s
 	`, whereClause)
@@ -366,7 +353,6 @@ func GetSummary(startDate, endDate string) (*models.Summary, error) {
 	err = DB.QueryRow(periodQuery, args...).Scan(
 		&s.PeriodKasIn, &s.PeriodKasOut,
 		&s.PeriodIkromIn, &s.PeriodIkromOut,
-		&s.PeriodPenIn, &s.PeriodPenOut,
 		&s.PeriodMasuk, &s.PeriodKeluar,
 	)
 	if err != nil {
@@ -388,10 +374,8 @@ func GetChartData() (*models.ChartData, error) {
 			COALESCE(SUM(kas_out), 0) as kas_out,
 			COALESCE(SUM(ikrom_in), 0) as ikrom_in,
 			COALESCE(SUM(ikrom_out), 0) as ikrom_out,
-			COALESCE(SUM(pen_in), 0) as pen_in,
-			COALESCE(SUM(pen_out), 0) as pen_out,
-			COALESCE(SUM(kas_in + ikrom_in + pen_in), 0) as total_in,
-			COALESCE(SUM(kas_out + ikrom_out + pen_out), 0) as total_out
+			COALESCE(SUM(kas_in + ikrom_in), 0) as total_in,
+			COALESCE(SUM(kas_out + ikrom_out), 0) as total_out
 		FROM transactions
 		GROUP BY strftime('%Y-%m', date)
 		ORDER BY month ASC
@@ -408,7 +392,6 @@ func GetChartData() (*models.ChartData, error) {
 			&m.Month,
 			&m.KasIn, &m.KasOut,
 			&m.IkromIn, &m.IkromOut,
-			&m.PenIn, &m.PenOut,
 			&m.TotalIn, &m.TotalOut,
 		)
 		if err != nil {
@@ -418,17 +401,15 @@ func GetChartData() (*models.ChartData, error) {
 		chartData.Monthly = append(chartData.Monthly, m)
 	}
 
-	// Pos Distribution (Current Saldo Breakdown)
+	// Pos Distribution (Current Saldo Breakdown: Kas vs Ikrom)
 	_ = DB.QueryRow(`
 		SELECT 
 			COALESCE(SUM(kas_in - kas_out), 0),
-			COALESCE(SUM(ikrom_in - ikrom_out), 0),
-			COALESCE(SUM(pen_in - pen_out), 0)
+			COALESCE(SUM(ikrom_in - ikrom_out), 0)
 		FROM transactions
 	`).Scan(
 		&chartData.PosDistribution.Kas,
 		&chartData.PosDistribution.Ikrom,
-		&chartData.PosDistribution.Pen,
 	)
 
 	return &chartData, nil
@@ -478,7 +459,7 @@ func ResetAllData() error {
 	return nil
 }
 
-// SeedSampleData populates rich, realistic sample records
+// SeedSampleData populates rich sample records for Kas and Ikrom
 func SeedSampleData() error {
 	_ = ResetAllData()
 
@@ -495,44 +476,38 @@ func SeedSampleData() error {
 		KasOut      float64
 		IkromIn     float64
 		IkromOut    float64
-		PenIn       float64
-		PenOut      float64
 	}{
 		{
 			Date:        fmt.Sprintf("%04d-%02d-01", thisYear, thisMonth),
 			RefNo:       "BKM-001",
-			Description: "Saldo Awal Kas & Titipan Awal Bulan",
+			Description: "Saldo Awal Kas & Titipan Ikrom Awal Bulan",
 			Category:    "Infaq / Shodaqoh",
-			KasIn:       5000000, KasOut: 0,
-			IkromIn:     3000000, IkromOut: 0,
-			PenIn:       4000000, PenOut: 0,
+			KasIn:       6500000, KasOut: 0,
+			IkromIn:     3500000, IkromOut: 0,
 		},
 		{
 			Date:        fmt.Sprintf("%04d-%02d-03", thisYear, thisMonth),
 			RefNo:       "BKM-002",
-			Description: "Penerimaan Infaq Jamaah & Donasi Bulanan",
+			Description: "Penerimaan Infaq Jamaah & Donasi Rutin",
 			Category:    "Infaq / Shodaqoh",
-			KasIn:       2500000, KasOut: 0,
+			KasIn:       2800000, KasOut: 0,
 			IkromIn:     0, IkromOut: 0,
-			PenIn:       0, PenOut: 0,
 		},
 		{
-			Date:        fmt.Sprintf("%04d-%02d-05", thisYear, thisMonth),
+			Date:        fmt.Sprintf("%04d-%02d-06", thisYear, thisMonth),
 			RefNo:       "BKM-003",
-			Description: "Penerimaan Iuran / SPP Santri Kelas A & B",
-			Category:    "Iuran / SPP",
+			Description: "Titipan Khusus Dana Ikrom dari Donatur H. Ahmad",
+			Category:    "Penerimaan Ikrom / Bisaroh",
 			KasIn:       0, KasOut: 0,
-			IkromIn:     0, IkromOut: 0,
-			PenIn:       3200000, PenOut: 0,
+			IkromIn:     2000000, IkromOut: 0,
 		},
 		{
-			Date:        fmt.Sprintf("%04d-%02d-07", thisYear, thisMonth),
+			Date:        fmt.Sprintf("%04d-%02d-08", thisYear, thisMonth),
 			RefNo:       "BKK-001",
-			Description: "Bisaroh / Honor Guru Pengajar Tahfidz & Kitab",
+			Description: "Bisaroh / Honor Guru Pengajar & Tenaga Pendidik",
 			Category:    "Bisaroh Guru / Ustadz",
 			KasIn:       0, KasOut: 0,
-			IkromIn:     0, IkromOut: 1800000,
-			PenIn:       0, PenOut: 0,
+			IkromIn:     0, IkromOut: 2500000,
 		},
 		{
 			Date:        fmt.Sprintf("%04d-%02d-10", thisYear, thisMonth),
@@ -541,34 +516,22 @@ func SeedSampleData() error {
 			Category:    "Operasional & Listrik / Air",
 			KasIn:       0, KasOut: 650000,
 			IkromIn:     0, IkromOut: 0,
-			PenIn:       0, PenOut: 0,
 		},
 		{
-			Date:        fmt.Sprintf("%04d-%02d-12", thisYear, thisMonth),
-			RefNo:       "BKM-004",
-			Description: "Titipan Khusus Dana Bisaroh / Ikrom dari Donatur H. Ahmad",
-			Category:    "Penerimaan Ikrom / Bisaroh",
-			KasIn:       0, KasOut: 0,
-			IkromIn:     2000000, IkromOut: 0,
-			PenIn:       0, PenOut: 0,
-		},
-		{
-			Date:        fmt.Sprintf("%04d-%02d-15", thisYear, thisMonth),
+			Date:        fmt.Sprintf("%04d-%02d-14", thisYear, thisMonth),
 			RefNo:       "BKK-003",
-			Description: "Pembelian ATK, Buku Modul Santri & Kertas Ujian",
-			Category:    "Pengadaan ATK & Buku",
-			KasIn:       0, KasOut: 0,
+			Description: "Pembelian ATK & Perlengkapan Kantor / Inventaris",
+			Category:    "Pengadaan ATK & Perlengkapan",
+			KasIn:       0, KasOut: 450000,
 			IkromIn:     0, IkromOut: 0,
-			PenIn:       0, PenOut: 750000,
 		},
 		{
-			Date:        fmt.Sprintf("%04d-%02d-18", thisYear, thisMonth),
-			RefNo:       "BKM-005",
+			Date:        fmt.Sprintf("%04d-%02d-17", thisYear, thisMonth),
+			RefNo:       "BKM-004",
 			Description: "Penerimaan Infaq Kotak Amal Jum'at",
 			Category:    "Infaq / Shodaqoh",
-			KasIn:       1850000, KasOut: 0,
+			KasIn:       1950000, KasOut: 0,
 			IkromIn:     0, IkromOut: 0,
-			PenIn:       0, PenOut: 0,
 		},
 		{
 			Date:        fmt.Sprintf("%04d-%02d-20", thisYear, thisMonth),
@@ -576,26 +539,23 @@ func SeedSampleData() error {
 			Description: "Bisaroh / Uang Saku Ustadz Tamu Pengajian Ahad Pagi",
 			Category:    "Bisaroh Guru / Ustadz",
 			KasIn:       0, KasOut: 0,
-			IkromIn:     0, IkromOut: 500000,
-			PenIn:       0, PenOut: 0,
+			IkromIn:     0, IkromOut: 600000,
 		},
 		{
 			Date:        fmt.Sprintf("%04d-%02d-22", thisYear, thisMonth),
 			RefNo:       "BKK-005",
-			Description: "Biaya Konsumsi Rapat Pengurus & Kajian Bulanan",
+			Description: "Biaya Konsumsi Rapat Pengurus & Jamuan Tamu",
 			Category:    "Konsumsi & Jamuan",
-			KasIn:       0, KasOut: 450000,
+			KasIn:       0, KasOut: 350000,
 			IkromIn:     0, IkromOut: 0,
-			PenIn:       0, PenOut: 0,
 		},
 		{
-			Date:        fmt.Sprintf("%04d-%02d-25", thisYear, thisMonth),
+			Date:        fmt.Sprintf("%04d-%02d-26", thisYear, thisMonth),
 			RefNo:       "BKK-006",
-			Description: "Renovasi Pengecatan Ruang Kelas & Perbaikan Meja Belajar",
-			Category:    "Pemeliharaan & Pembangunan",
-			KasIn:       0, KasOut: 0,
+			Description: "Pemeliharaan AC, Lampu, dan Kebersihan Fasilitas",
+			Category:    "Pemeliharaan Fasilitas",
+			KasIn:       0, KasOut: 500000,
 			IkromIn:     0, IkromOut: 0,
-			PenIn:       0, PenOut: 1200000,
 		},
 	}
 
@@ -609,8 +569,6 @@ func SeedSampleData() error {
 			KasOut:      item.KasOut,
 			IkromIn:     item.IkromIn,
 			IkromOut:    item.IkromOut,
-			PenIn:       item.PenIn,
-			PenOut:      item.PenOut,
 		})
 		if err != nil {
 			return err

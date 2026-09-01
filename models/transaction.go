@@ -2,23 +2,20 @@ package models
 
 import "time"
 
-// Transaction represents a multi-column cash book entry
+// Transaction represents a multi-column cash book entry for Kas & Ikrom
 type Transaction struct {
 	ID           int64     `json:"id"`
 	Date         string    `json:"date"`          // Format: YYYY-MM-DD
 	RefNo        string    `json:"ref_no"`        // Nomor Bukti/Kwitansi (e.g. BKM-001)
 	Description  string    `json:"description"`   // Keterangan / Uraian
-	Category     string    `json:"category"`      // Kategori (e.g. Donasi, SPP, Bisaroh, Operasional)
+	Category     string    `json:"category"`      // Kategori (e.g. Infaq, Bisaroh, Operasional)
 	KasIn        float64   `json:"kas_in"`        // Kas Masuk
 	KasOut       float64   `json:"kas_out"`       // Kas Keluar
 	IkromIn      float64   `json:"ikrom_in"`      // Ikrom Masuk
 	IkromOut     float64   `json:"ikrom_out"`     // Ikrom Keluar
-	PenIn        float64   `json:"pen_in"`        // Pen Masuk
-	PenOut       float64   `json:"pen_out"`       // Pen Keluar
 	KasBalance   float64   `json:"kas_balance"`   // Running balance for Kas
 	IkromBalance float64   `json:"ikrom_balance"` // Running balance for Ikrom
-	PenBalance   float64   `json:"pen_balance"`   // Running balance for Pen
-	TotalBalance float64   `json:"total_balance"` // Running grand total (Kas + Ikrom + Pen)
+	TotalBalance float64   `json:"total_balance"` // Running grand total (Kas + Ikrom)
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 }
@@ -33,8 +30,6 @@ type TransactionInput struct {
 	KasOut      float64 `json:"kas_out"`
 	IkromIn     float64 `json:"ikrom_in"`
 	IkromOut    float64 `json:"ikrom_out"`
-	PenIn       float64 `json:"pen_in"`
-	PenOut      float64 `json:"pen_out"`
 }
 
 // Summary provides aggregate metrics for the dashboard
@@ -47,10 +42,6 @@ type Summary struct {
 	TotalIkromOut float64 `json:"total_ikrom_out"`
 	SaldoIkrom    float64 `json:"saldo_ikrom"`
 
-	TotalPenIn    float64 `json:"total_pen_in"`
-	TotalPenOut   float64 `json:"total_pen_out"`
-	SaldoPen      float64 `json:"saldo_pen"`
-
 	TotalMasuk    float64 `json:"total_masuk"`
 	TotalKeluar   float64 `json:"total_keluar"`
 	TotalSaldo    float64 `json:"total_saldo"`
@@ -60,8 +51,6 @@ type Summary struct {
 	PeriodKasOut   float64 `json:"period_kas_out"`
 	PeriodIkromIn  float64 `json:"period_ikrom_in"`
 	PeriodIkromOut float64 `json:"period_ikrom_out"`
-	PeriodPenIn    float64 `json:"period_pen_in"`
-	PeriodPenOut   float64 `json:"period_pen_out"`
 	PeriodMasuk    float64 `json:"period_masuk"`
 	PeriodKeluar   float64 `json:"period_keluar"`
 
@@ -73,7 +62,7 @@ type Category struct {
 	ID   int64  `json:"id"`
 	Name string `json:"name"`
 	Type string `json:"type"` // "in", "out", "both"
-	Pos  string `json:"pos"`  // "kas", "ikrom", "pen", "all"
+	Pos  string `json:"pos"`  // "kas", "ikrom", "all"
 }
 
 // MonthlyStats provides monthly trend data for charts
@@ -83,8 +72,6 @@ type MonthlyStats struct {
 	KasOut    float64 `json:"kas_out"`
 	IkromIn   float64 `json:"ikrom_in"`
 	IkromOut  float64 `json:"ikrom_out"`
-	PenIn     float64 `json:"pen_in"`
-	PenOut    float64 `json:"pen_out"`
 	TotalIn   float64 `json:"total_in"`
 	TotalOut  float64 `json:"total_out"`
 	NetChange float64 `json:"net_change"`
@@ -96,6 +83,5 @@ type ChartData struct {
 	PosDistribution struct {
 		Kas   float64 `json:"kas"`
 		Ikrom float64 `json:"ikrom"`
-		Pen   float64 `json:"pen"`
 	} `json:"pos_distribution"`
 }
