@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-// corsMiddleware adds standard CORS headers for local development and API access
+// corsMiddleware adds standard CORS headers
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -60,7 +60,30 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	// API Routes
+	// Student API Routes
+	mux.HandleFunc("/api/students", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			handlers.GetStudents(w, r)
+		case http.MethodPost:
+			handlers.CreateStudent(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	mux.HandleFunc("/api/students/", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPut:
+			handlers.UpdateStudent(w, r)
+		case http.MethodDelete:
+			handlers.DeleteStudent(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	// Transaction API Routes
 	mux.HandleFunc("/api/transactions", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -74,8 +97,6 @@ func main() {
 
 	mux.HandleFunc("/api/transactions/", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
-		case http.MethodGet:
-			handlers.GetTransactionByID(w, r)
 		case http.MethodPut:
 			handlers.UpdateTransaction(w, r)
 		case http.MethodDelete:
@@ -85,10 +106,9 @@ func main() {
 		}
 	})
 
+
 	mux.HandleFunc("/api/summary", handlers.GetSummary)
 	mux.HandleFunc("/api/chart-data", handlers.GetChartData)
-	mux.HandleFunc("/api/categories", handlers.CategoriesHandler)
-	mux.HandleFunc("/api/categories/", handlers.DeleteCategoryHandler)
 	mux.HandleFunc("/api/export/csv", handlers.ExportCSV)
 	mux.HandleFunc("/api/seed", handlers.SeedData)
 	mux.HandleFunc("/api/reset", handlers.ResetData)
@@ -105,7 +125,7 @@ func main() {
 	handler := loggingMiddleware(corsMiddleware(mux))
 
 	fmt.Println("==========================================================")
-	fmt.Println("  APLIKASI BUKU KAS (KAS - IKROM - PEN)")
+	fmt.Println("  APLIKASI BUKU KAS & DANA IKROM + MASTER DATA SISWA")
 	fmt.Println("  Backend: Golang (net/http + SQLite)")
 	fmt.Println("  Frontend: Vue 3 + Tailwind CSS + Chart.js")
 	fmt.Printf("  Aplikasi berjalan di: http://localhost:%s\n", port)

@@ -12,7 +12,7 @@ import (
 
 var DB *sql.DB
 
-// InitDB initializes SQLite connection, runs migrations, and inserts default categories
+// InitDB initializes SQLite connection, runs migrations, and seeds initial data
 func InitDB(dataSourceName string) (*sql.DB, error) {
 	var err error
 	DB, err = sql.Open("sqlite", dataSourceName)
@@ -20,8 +20,7 @@ func InitDB(dataSourceName string) (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
-	// Configure connection pool & SQLite pragmas
-	DB.SetMaxOpenConns(1) // SQLite single writer safety
+	DB.SetMaxOpenConns(1)
 	_, err = DB.Exec(`
 		PRAGMA journal_mode = WAL;
 		PRAGMA synchronous = NORMAL;
@@ -35,27 +34,28 @@ func InitDB(dataSourceName string) (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to create tables: %w", err)
 	}
 
-	if err := seedDefaultCategories(); err != nil {
-		return nil, fmt.Errorf("failed to seed default categories: %w", err)
-	}
-
 	return DB, nil
 }
 
 func createTables() error {
 	queries := []string{
-		`CREATE TABLE IF NOT EXISTS categories (
+		// Students table: hanya nama dan nama orang tua
+		`CREATE TABLE IF NOT EXISTS students (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			name TEXT NOT NULL UNIQUE,
-			type TEXT NOT NULL DEFAULT 'both', -- 'in', 'out', 'both'
-			pos TEXT NOT NULL DEFAULT 'all'    -- 'kas', 'ikrom', 'all'
+			name TEXT NOT NULL,
+			parent TEXT DEFAULT '',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);`,
+		`CREATE INDEX IF NOT EXISTS idx_student_name ON students(name);`,
+
+		// Transactions table
 		`CREATE TABLE IF NOT EXISTS transactions (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			date TEXT NOT NULL,                -- YYYY-MM-DD
+			date TEXT NOT NULL,
 			ref_no TEXT DEFAULT '',
+			name TEXT DEFAULT '',
 			description TEXT NOT NULL,
-			category TEXT DEFAULT 'Umum',
 			kas_in REAL NOT NULL DEFAULT 0.0,
 			kas_out REAL NOT NULL DEFAULT 0.0,
 			ikrom_in REAL NOT NULL DEFAULT 0.0,
@@ -64,7 +64,6 @@ func createTables() error {
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);`,
 		`CREATE INDEX IF NOT EXISTS idx_trans_date ON transactions(date);`,
-		`CREATE INDEX IF NOT EXISTS idx_trans_category ON transactions(category);`,
 	}
 
 	for _, q := range queries {
@@ -72,68 +71,118 @@ func createTables() error {
 			return err
 		}
 	}
+
+	// Migration: add name column to transactions if not exists
+	_, _ = DB.Exec("ALTER TABLE transactions ADD COLUMN name TEXT DEFAULT '';")
+
 	return nil
 }
 
-func seedDefaultCategories() error {
-	var count int
-	err := DB.QueryRow("SELECT COUNT(*) FROM categories").Scan(&count)
+// -------------------------------- STUDENT CRUD --------------------------------
+
+// GetAllStudents returns students with optional search filter
+func GetAllStudents(search string) ([]models.Student, error) {
+	var conditions []string
+	var args []interface{}
+
+	if search != "" {
+		likePattern := "%" + search + "%"
+		conditions = append(conditions, "(name LIKE ? OR parent LIKE ?)")
+		args = append(args, likePattern, likePattern)
+	}
+
+	whereClause := ""
+	if len(conditions) > 0 {
+		whereClause = "WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	query := fmt.Sprintf(`
+		SELECT id, name, parent, created_at, updated_at
+		FROM students
+		%s
+		ORDER BY name ASC
+	`, whereClause)
+
+	rows, err := DB.Query(query, args...)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if count > 0 {
-		return nil
-	}
+	defer rows.Close()
 
-	defaultCats := []struct {
-		Name string
-		Type string
-		Pos  string
-	}{
-		{"Infaq / Shodaqoh", "in", "kas"},
-		{"Donasi Khusus", "in", "kas"},
-		{"Dana Bantuan Operasional", "in", "kas"},
-		{"Penerimaan Ikrom / Bisaroh", "in", "ikrom"},
-		{"Bisaroh Guru / Ustadz", "out", "ikrom"},
-		{"Honor Karyawan / Pengurus", "out", "ikrom"},
-		{"Operasional & Listrik / Air", "out", "kas"},
-		{"Konsumsi & Jamuan", "out", "kas"},
-		{"Pengadaan ATK & Perlengkapan", "out", "kas"},
-		{"Pemeliharaan Fasilitas", "out", "kas"},
-		{"Lain-lain", "both", "all"},
+	var students []models.Student
+	for rows.Next() {
+		var s models.Student
+		var createdAt, updatedAt string
+		err := rows.Scan(&s.ID, &s.Name, &s.Parent, &createdAt, &updatedAt)
+		if err != nil {
+			return nil, err
+		}
+		s.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", createdAt)
+		s.UpdatedAt, _ = time.Parse("2006-01-02 15:04:05", updatedAt)
+		students = append(students, s)
 	}
-
-	stmt, err := DB.Prepare("INSERT INTO categories (name, type, pos) VALUES (?, ?, ?)")
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-
-	for _, c := range defaultCats {
-		_, _ = stmt.Exec(c.Name, c.Type, c.Pos)
-	}
-	return nil
+	return students, nil
 }
 
-// GetInitialBalance calculates the balance of all transactions before a given date
+// GetStudentByID fetches a single student by ID
+func GetStudentByID(id int64) (*models.Student, error) {
+	var s models.Student
+	var createdAt, updatedAt string
+	err := DB.QueryRow(
+		`SELECT id, name, parent, created_at, updated_at FROM students WHERE id = ?`, id,
+	).Scan(&s.ID, &s.Name, &s.Parent, &createdAt, &updatedAt)
+	if err != nil {
+		return nil, err
+	}
+	s.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", createdAt)
+	s.UpdatedAt, _ = time.Parse("2006-01-02 15:04:05", updatedAt)
+	return &s, nil
+}
+
+// CreateStudent inserts a new student
+func CreateStudent(input models.StudentInput) (int64, error) {
+	result, err := DB.Exec(
+		`INSERT INTO students (name, parent, created_at, updated_at)
+		 VALUES (?, ?, datetime('now','localtime'), datetime('now','localtime'))`,
+		input.Name, input.Parent,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.LastInsertId()
+}
+
+// UpdateStudent updates an existing student
+func UpdateStudent(id int64, input models.StudentInput) error {
+	_, err := DB.Exec(
+		`UPDATE students SET name = ?, parent = ?, updated_at = datetime('now','localtime') WHERE id = ?`,
+		input.Name, input.Parent, id,
+	)
+	return err
+}
+
+// DeleteStudent deletes a student
+func DeleteStudent(id int64) error {
+	_, err := DB.Exec("DELETE FROM students WHERE id = ?", id)
+	return err
+}
+
+// -------------------------------- TRANSACTIONS --------------------------------
+
+// GetInitialBalance calculates balance of all transactions before startDate
 func GetInitialBalance(beforeDate string) (kasBal, ikromBal float64, err error) {
 	if beforeDate == "" {
 		return 0, 0, nil
 	}
-
-	query := `
-		SELECT 
-			COALESCE(SUM(kas_in - kas_out), 0),
-			COALESCE(SUM(ikrom_in - ikrom_out), 0)
-		FROM transactions
-		WHERE date < ?
-	`
-	err = DB.QueryRow(query, beforeDate).Scan(&kasBal, &ikromBal)
-	return kasBal, ikromBal, err
+	err = DB.QueryRow(`
+		SELECT COALESCE(SUM(kas_in - kas_out), 0), COALESCE(SUM(ikrom_in - ikrom_out), 0)
+		FROM transactions WHERE date < ?
+	`, beforeDate).Scan(&kasBal, &ikromBal)
+	return
 }
 
-// GetAllTransactions retrieves filtered transactions and calculates accurate running balances for Kas & Ikrom
-func GetAllTransactions(startDate, endDate, category, search, posFilter string) ([]models.Transaction, error) {
+// GetAllTransactions retrieves filtered transactions with running balances
+func GetAllTransactions(startDate, endDate, search, posFilter string) ([]models.Transaction, error) {
 	var conditions []string
 	var args []interface{}
 
@@ -145,14 +194,10 @@ func GetAllTransactions(startDate, endDate, category, search, posFilter string) 
 		conditions = append(conditions, "date <= ?")
 		args = append(args, endDate)
 	}
-	if category != "" && category != "Semua" {
-		conditions = append(conditions, "category = ?")
-		args = append(args, category)
-	}
 	if search != "" {
-		likePattern := "%" + search + "%"
-		conditions = append(conditions, "(description LIKE ? OR ref_no LIKE ? OR category LIKE ?)")
-		args = append(args, likePattern, likePattern, likePattern)
+		like := "%" + search + "%"
+		conditions = append(conditions, "(name LIKE ? OR description LIKE ? OR ref_no LIKE ?)")
+		args = append(args, like, like, like)
 	}
 	if posFilter != "" && posFilter != "all" {
 		switch strings.ToLower(posFilter) {
@@ -168,19 +213,15 @@ func GetAllTransactions(startDate, endDate, category, search, posFilter string) 
 		whereClause = "WHERE " + strings.Join(conditions, " AND ")
 	}
 
-	// Calculate initial balance prior to startDate
 	initKas, initIkrom, err := GetInitialBalance(startDate)
 	if err != nil {
 		return nil, err
 	}
 
 	query := fmt.Sprintf(`
-		SELECT id, date, ref_no, description, category,
-		       kas_in, kas_out, ikrom_in, ikrom_out,
-		       created_at, updated_at
-		FROM transactions
-		%s
-		ORDER BY date ASC, id ASC
+		SELECT id, date, ref_no, COALESCE(name,''), description,
+		       kas_in, kas_out, ikrom_in, ikrom_out, created_at, updated_at
+		FROM transactions %s ORDER BY date ASC, id ASC
 	`, whereClause)
 
 	rows, err := DB.Query(query, args...)
@@ -189,64 +230,45 @@ func GetAllTransactions(startDate, endDate, category, search, posFilter string) 
 	}
 	defer rows.Close()
 
-	var transactions []models.Transaction
+	var txns []models.Transaction
 	runningKas := initKas
 	runningIkrom := initIkrom
 
 	for rows.Next() {
 		var t models.Transaction
-		var createdAt, updatedAt string
-		err := rows.Scan(
-			&t.ID, &t.Date, &t.RefNo, &t.Description, &t.Category,
-			&t.KasIn, &t.KasOut, &t.IkromIn, &t.IkromOut,
-			&createdAt, &updatedAt,
-		)
-		if err != nil {
+		var ca, ua string
+		if err := rows.Scan(&t.ID, &t.Date, &t.RefNo, &t.Name, &t.Description,
+			&t.KasIn, &t.KasOut, &t.IkromIn, &t.IkromOut, &ca, &ua); err != nil {
 			return nil, err
 		}
+		t.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", ca)
+		t.UpdatedAt, _ = time.Parse("2006-01-02 15:04:05", ua)
 
-		t.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", createdAt)
-		t.UpdatedAt, _ = time.Parse("2006-01-02 15:04:05", updatedAt)
-
-		runningKas += (t.KasIn - t.KasOut)
-		runningIkrom += (t.IkromIn - t.IkromOut)
-
+		runningKas += t.KasIn - t.KasOut
+		runningIkrom += t.IkromIn - t.IkromOut
 		t.KasBalance = runningKas
 		t.IkromBalance = runningIkrom
 		t.TotalBalance = runningKas + runningIkrom
-
-		transactions = append(transactions, t)
+		txns = append(txns, t)
 	}
-
-	if err = rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return transactions, nil
+	return txns, rows.Err()
 }
 
 // GetTransactionByID fetches a single transaction by ID
 func GetTransactionByID(id int64) (*models.Transaction, error) {
-	query := `
-		SELECT id, date, ref_no, description, category,
-		       kas_in, kas_out, ikrom_in, ikrom_out,
-		       created_at, updated_at
-		FROM transactions
-		WHERE id = ?
-	`
 	var t models.Transaction
-	var createdAt, updatedAt string
-	err := DB.QueryRow(query, id).Scan(
-		&t.ID, &t.Date, &t.RefNo, &t.Description, &t.Category,
-		&t.KasIn, &t.KasOut, &t.IkromIn, &t.IkromOut,
-		&createdAt, &updatedAt,
-	)
+	var ca, ua string
+	err := DB.QueryRow(`
+		SELECT id, date, ref_no, COALESCE(name,''), description,
+		       kas_in, kas_out, ikrom_in, ikrom_out, created_at, updated_at
+		FROM transactions WHERE id = ?
+	`, id).Scan(&t.ID, &t.Date, &t.RefNo, &t.Name, &t.Description,
+		&t.KasIn, &t.KasOut, &t.IkromIn, &t.IkromOut, &ca, &ua)
 	if err != nil {
 		return nil, err
 	}
-
-	t.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", createdAt)
-	t.UpdatedAt, _ = time.Parse("2006-01-02 15:04:05", updatedAt)
+	t.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", ca)
+	t.UpdatedAt, _ = time.Parse("2006-01-02 15:04:05", ua)
 	return &t, nil
 }
 
@@ -255,21 +277,12 @@ func CreateTransaction(input models.TransactionInput) (int64, error) {
 	if input.Date == "" {
 		input.Date = time.Now().Format("2006-01-02")
 	}
-	if input.Category == "" {
-		input.Category = "Umum"
-	}
-
-	query := `
-		INSERT INTO transactions (
-			date, ref_no, description, category,
-			kas_in, kas_out, ikrom_in, ikrom_out,
-			created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'), datetime('now', 'localtime'))
-	`
-	result, err := DB.Exec(query,
-		input.Date, input.RefNo, input.Description, input.Category,
-		input.KasIn, input.KasOut, input.IkromIn, input.IkromOut,
-	)
+	result, err := DB.Exec(`
+		INSERT INTO transactions (date, ref_no, name, description,
+		    kas_in, kas_out, ikrom_in, ikrom_out, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now','localtime'), datetime('now','localtime'))
+	`, input.Date, input.RefNo, input.Name, input.Description,
+		input.KasIn, input.KasOut, input.IkromIn, input.IkromOut)
 	if err != nil {
 		return 0, err
 	}
@@ -278,18 +291,13 @@ func CreateTransaction(input models.TransactionInput) (int64, error) {
 
 // UpdateTransaction updates an existing transaction
 func UpdateTransaction(id int64, input models.TransactionInput) error {
-	query := `
-		UPDATE transactions
-		SET date = ?, ref_no = ?, description = ?, category = ?,
-		    kas_in = ?, kas_out = ?, ikrom_in = ?, ikrom_out = ?,
-		    updated_at = datetime('now', 'localtime')
-		WHERE id = ?
-	`
-	_, err := DB.Exec(query,
-		input.Date, input.RefNo, input.Description, input.Category,
-		input.KasIn, input.KasOut, input.IkromIn, input.IkromOut,
-		id,
-	)
+	_, err := DB.Exec(`
+		UPDATE transactions SET date=?, ref_no=?, name=?, description=?,
+		    kas_in=?, kas_out=?, ikrom_in=?, ikrom_out=?,
+		    updated_at=datetime('now','localtime')
+		WHERE id=?
+	`, input.Date, input.RefNo, input.Name, input.Description,
+		input.KasIn, input.KasOut, input.IkromIn, input.IkromOut, id)
 	return err
 }
 
@@ -299,62 +307,48 @@ func DeleteTransaction(id int64) error {
 	return err
 }
 
-// GetSummary calculates overall and filtered totals for Kas & Ikrom
+// GetSummary calculates overall and period totals
 func GetSummary(startDate, endDate string) (*models.Summary, error) {
 	var s models.Summary
 
-	// Overall Lifetime Summary
 	err := DB.QueryRow(`
-		SELECT 
-			COALESCE(SUM(kas_in), 0), COALESCE(SUM(kas_out), 0), COALESCE(SUM(kas_in - kas_out), 0),
-			COALESCE(SUM(ikrom_in), 0), COALESCE(SUM(ikrom_out), 0), COALESCE(SUM(ikrom_in - ikrom_out), 0),
-			COALESCE(SUM(kas_in + ikrom_in), 0),
-			COALESCE(SUM(kas_out + ikrom_out), 0),
-			COALESCE(SUM((kas_in - kas_out) + (ikrom_in - ikrom_out)), 0),
-			COUNT(*)
+		SELECT
+			COALESCE(SUM(kas_in),0), COALESCE(SUM(kas_out),0), COALESCE(SUM(kas_in-kas_out),0),
+			COALESCE(SUM(ikrom_in),0), COALESCE(SUM(ikrom_out),0), COALESCE(SUM(ikrom_in-ikrom_out),0),
+			COALESCE(SUM(kas_in+ikrom_in),0), COALESCE(SUM(kas_out+ikrom_out),0),
+			COALESCE(SUM((kas_in-kas_out)+(ikrom_in-ikrom_out)),0), COUNT(*)
 		FROM transactions
-	`).Scan(
-		&s.TotalKasIn, &s.TotalKasOut, &s.SaldoKas,
+	`).Scan(&s.TotalKasIn, &s.TotalKasOut, &s.SaldoKas,
 		&s.TotalIkromIn, &s.TotalIkromOut, &s.SaldoIkrom,
-		&s.TotalMasuk, &s.TotalKeluar, &s.TotalSaldo,
-		&s.TransactionCount,
-	)
+		&s.TotalMasuk, &s.TotalKeluar, &s.TotalSaldo, &s.TransactionCount)
 	if err != nil {
 		return nil, err
 	}
 
-	// Filter Period Summary
-	var conditions []string
+	_ = DB.QueryRow("SELECT COUNT(*) FROM students").Scan(&s.StudentCount)
+
+	var conds []string
 	var args []interface{}
 	if startDate != "" {
-		conditions = append(conditions, "date >= ?")
+		conds = append(conds, "date >= ?")
 		args = append(args, startDate)
 	}
 	if endDate != "" {
-		conditions = append(conditions, "date <= ?")
+		conds = append(conds, "date <= ?")
 		args = append(args, endDate)
 	}
-
-	whereClause := ""
-	if len(conditions) > 0 {
-		whereClause = "WHERE " + strings.Join(conditions, " AND ")
+	where := ""
+	if len(conds) > 0 {
+		where = "WHERE " + strings.Join(conds, " AND ")
 	}
 
-	periodQuery := fmt.Sprintf(`
-		SELECT 
-			COALESCE(SUM(kas_in), 0), COALESCE(SUM(kas_out), 0),
-			COALESCE(SUM(ikrom_in), 0), COALESCE(SUM(ikrom_out), 0),
-			COALESCE(SUM(kas_in + ikrom_in), 0),
-			COALESCE(SUM(kas_out + ikrom_out), 0)
-		FROM transactions
-		%s
-	`, whereClause)
-
-	err = DB.QueryRow(periodQuery, args...).Scan(
-		&s.PeriodKasIn, &s.PeriodKasOut,
-		&s.PeriodIkromIn, &s.PeriodIkromOut,
-		&s.PeriodMasuk, &s.PeriodKeluar,
-	)
+	err = DB.QueryRow(fmt.Sprintf(`
+		SELECT COALESCE(SUM(kas_in),0), COALESCE(SUM(kas_out),0),
+		       COALESCE(SUM(ikrom_in),0), COALESCE(SUM(ikrom_out),0),
+		       COALESCE(SUM(kas_in+ikrom_in),0), COALESCE(SUM(kas_out+ikrom_out),0)
+		FROM transactions %s
+	`, where), args...).Scan(&s.PeriodKasIn, &s.PeriodKasOut,
+		&s.PeriodIkromIn, &s.PeriodIkromOut, &s.PeriodMasuk, &s.PeriodKeluar)
 	if err != nil {
 		return nil, err
 	}
@@ -362,24 +356,16 @@ func GetSummary(startDate, endDate string) (*models.Summary, error) {
 	return &s, nil
 }
 
-// GetChartData aggregates data for visualizations
+// GetChartData aggregates data for charts
 func GetChartData() (*models.ChartData, error) {
-	var chartData models.ChartData
+	var cd models.ChartData
 
-	// Query last 12 months aggregates
 	rows, err := DB.Query(`
-		SELECT 
-			strftime('%Y-%m', date) AS month,
-			COALESCE(SUM(kas_in), 0) as kas_in,
-			COALESCE(SUM(kas_out), 0) as kas_out,
-			COALESCE(SUM(ikrom_in), 0) as ikrom_in,
-			COALESCE(SUM(ikrom_out), 0) as ikrom_out,
-			COALESCE(SUM(kas_in + ikrom_in), 0) as total_in,
-			COALESCE(SUM(kas_out + ikrom_out), 0) as total_out
-		FROM transactions
-		GROUP BY strftime('%Y-%m', date)
-		ORDER BY month ASC
-		LIMIT 12
+		SELECT strftime('%Y-%m', date) AS month,
+			COALESCE(SUM(kas_in),0), COALESCE(SUM(kas_out),0),
+			COALESCE(SUM(ikrom_in),0), COALESCE(SUM(ikrom_out),0),
+			COALESCE(SUM(kas_in+ikrom_in),0), COALESCE(SUM(kas_out+ikrom_out),0)
+		FROM transactions GROUP BY month ORDER BY month ASC LIMIT 12
 	`)
 	if err != nil {
 		return nil, err
@@ -388,68 +374,20 @@ func GetChartData() (*models.ChartData, error) {
 
 	for rows.Next() {
 		var m models.MonthlyStats
-		err := rows.Scan(
-			&m.Month,
-			&m.KasIn, &m.KasOut,
-			&m.IkromIn, &m.IkromOut,
-			&m.TotalIn, &m.TotalOut,
-		)
-		if err != nil {
-			return nil, err
-		}
+		rows.Scan(&m.Month, &m.KasIn, &m.KasOut, &m.IkromIn, &m.IkromOut, &m.TotalIn, &m.TotalOut)
 		m.NetChange = m.TotalIn - m.TotalOut
-		chartData.Monthly = append(chartData.Monthly, m)
+		cd.Monthly = append(cd.Monthly, m)
 	}
 
-	// Pos Distribution (Current Saldo Breakdown: Kas vs Ikrom)
 	_ = DB.QueryRow(`
-		SELECT 
-			COALESCE(SUM(kas_in - kas_out), 0),
-			COALESCE(SUM(ikrom_in - ikrom_out), 0)
+		SELECT COALESCE(SUM(kas_in-kas_out),0), COALESCE(SUM(ikrom_in-ikrom_out),0)
 		FROM transactions
-	`).Scan(
-		&chartData.PosDistribution.Kas,
-		&chartData.PosDistribution.Ikrom,
-	)
+	`).Scan(&cd.PosDistribution.Kas, &cd.PosDistribution.Ikrom)
 
-	return &chartData, nil
+	return &cd, nil
 }
 
-// GetCategories returns all category records
-func GetCategories() ([]models.Category, error) {
-	rows, err := DB.Query("SELECT id, name, type, pos FROM categories ORDER BY name ASC")
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var categories []models.Category
-	for rows.Next() {
-		var c models.Category
-		if err := rows.Scan(&c.ID, &c.Name, &c.Type, &c.Pos); err != nil {
-			return nil, err
-		}
-		categories = append(categories, c)
-	}
-	return categories, nil
-}
-
-// CreateCategory adds a category
-func CreateCategory(c models.Category) (int64, error) {
-	res, err := DB.Exec("INSERT INTO categories (name, type, pos) VALUES (?, ?, ?)", c.Name, c.Type, c.Pos)
-	if err != nil {
-		return 0, err
-	}
-	return res.LastInsertId()
-}
-
-// DeleteCategory removes a category by ID
-func DeleteCategory(id int64) error {
-	_, err := DB.Exec("DELETE FROM categories WHERE id = ?", id)
-	return err
-}
-
-// ResetAllData wipes all transactions and resets category table
+// ResetAllData wipes all transactions
 func ResetAllData() error {
 	_, err := DB.Exec("DELETE FROM transactions")
 	if err != nil {
@@ -459,116 +397,49 @@ func ResetAllData() error {
 	return nil
 }
 
-// SeedSampleData populates rich sample records for Kas and Ikrom
+// SeedSampleData populates sample records using student names
 func SeedSampleData() error {
 	_ = ResetAllData()
 
 	now := time.Now()
-	thisYear := now.Year()
-	thisMonth := int(now.Month())
+	y, m := now.Year(), int(now.Month())
 
-	sampleItems := []struct {
-		Date        string
-		RefNo       string
-		Description string
-		Category    string
-		KasIn       float64
-		KasOut      float64
-		IkromIn     float64
-		IkromOut    float64
-	}{
-		{
-			Date:        fmt.Sprintf("%04d-%02d-01", thisYear, thisMonth),
-			RefNo:       "BKM-001",
-			Description: "Saldo Awal Kas & Titipan Ikrom Awal Bulan",
-			Category:    "Infaq / Shodaqoh",
-			KasIn:       6500000, KasOut: 0,
-			IkromIn:     3500000, IkromOut: 0,
-		},
-		{
-			Date:        fmt.Sprintf("%04d-%02d-03", thisYear, thisMonth),
-			RefNo:       "BKM-002",
-			Description: "Penerimaan Infaq Jamaah & Donasi Rutin",
-			Category:    "Infaq / Shodaqoh",
-			KasIn:       2800000, KasOut: 0,
-			IkromIn:     0, IkromOut: 0,
-		},
-		{
-			Date:        fmt.Sprintf("%04d-%02d-06", thisYear, thisMonth),
-			RefNo:       "BKM-003",
-			Description: "Titipan Khusus Dana Ikrom dari Donatur H. Ahmad",
-			Category:    "Penerimaan Ikrom / Bisaroh",
-			KasIn:       0, KasOut: 0,
-			IkromIn:     2000000, IkromOut: 0,
-		},
-		{
-			Date:        fmt.Sprintf("%04d-%02d-08", thisYear, thisMonth),
-			RefNo:       "BKK-001",
-			Description: "Bisaroh / Honor Guru Pengajar & Tenaga Pendidik",
-			Category:    "Bisaroh Guru / Ustadz",
-			KasIn:       0, KasOut: 0,
-			IkromIn:     0, IkromOut: 2500000,
-		},
-		{
-			Date:        fmt.Sprintf("%04d-%02d-10", thisYear, thisMonth),
-			RefNo:       "BKK-002",
-			Description: "Pembayaran Listrik PLN, Air PDAM, dan Internet",
-			Category:    "Operasional & Listrik / Air",
-			KasIn:       0, KasOut: 650000,
-			IkromIn:     0, IkromOut: 0,
-		},
-		{
-			Date:        fmt.Sprintf("%04d-%02d-14", thisYear, thisMonth),
-			RefNo:       "BKK-003",
-			Description: "Pembelian ATK & Perlengkapan Kantor / Inventaris",
-			Category:    "Pengadaan ATK & Perlengkapan",
-			KasIn:       0, KasOut: 450000,
-			IkromIn:     0, IkromOut: 0,
-		},
-		{
-			Date:        fmt.Sprintf("%04d-%02d-17", thisYear, thisMonth),
-			RefNo:       "BKM-004",
-			Description: "Penerimaan Infaq Kotak Amal Jum'at",
-			Category:    "Infaq / Shodaqoh",
-			KasIn:       1950000, KasOut: 0,
-			IkromIn:     0, IkromOut: 0,
-		},
-		{
-			Date:        fmt.Sprintf("%04d-%02d-20", thisYear, thisMonth),
-			RefNo:       "BKK-004",
-			Description: "Bisaroh / Uang Saku Ustadz Tamu Pengajian Ahad Pagi",
-			Category:    "Bisaroh Guru / Ustadz",
-			KasIn:       0, KasOut: 0,
-			IkromIn:     0, IkromOut: 600000,
-		},
-		{
-			Date:        fmt.Sprintf("%04d-%02d-22", thisYear, thisMonth),
-			RefNo:       "BKK-005",
-			Description: "Biaya Konsumsi Rapat Pengurus & Jamuan Tamu",
-			Category:    "Konsumsi & Jamuan",
-			KasIn:       0, KasOut: 350000,
-			IkromIn:     0, IkromOut: 0,
-		},
-		{
-			Date:        fmt.Sprintf("%04d-%02d-26", thisYear, thisMonth),
-			RefNo:       "BKK-006",
-			Description: "Pemeliharaan AC, Lampu, dan Kebersihan Fasilitas",
-			Category:    "Pemeliharaan Fasilitas",
-			KasIn:       0, KasOut: 500000,
-			IkromIn:     0, IkromOut: 0,
-		},
+	// Ensure some default students exist
+	var studentCount int
+	_ = DB.QueryRow("SELECT COUNT(*) FROM students").Scan(&studentCount)
+	if studentCount == 0 {
+		defaultStudents := []models.StudentInput{
+			{Name: "Muhammad Rizky Pratama", Parent: "Bpk. Hendra Saputra"},
+			{Name: "Siti Fatimah Azzahra", Parent: "Bpk. Fauzi Rahman"},
+			{Name: "Ahmad Fauzan Mubarok", Parent: "Bpk. Abdullah Hasan"},
+			{Name: "Nur Aini Rahmawati", Parent: "Bpk. Wahyu Pratomo"},
+			{Name: "Bilal Ramadhan", Parent: "Bpk. Supriyadi"},
+		}
+		for _, s := range defaultStudents {
+			_, _ = CreateStudent(s)
+		}
 	}
 
-	for _, item := range sampleItems {
+	samples := []struct {
+		Date, RefNo, Name, Desc       string
+		KasIn, KasOut, IkromIn, IkromOut float64
+	}{
+		{fmt.Sprintf("%04d-%02d-01", y, m), "BKM-001", "Muhammad Rizky Pratama", "Iuran Kas & Infaq Bulanan Siswa", 350000, 0, 150000, 0},
+		{fmt.Sprintf("%04d-%02d-02", y, m), "BKM-002", "Siti Fatimah Azzahra", "Iuran Kas & Infaq Bulanan Siswa", 350000, 0, 150000, 0},
+		{fmt.Sprintf("%04d-%02d-03", y, m), "BKM-003", "Ahmad Fauzan Mubarok", "Iuran Kas & Infaq Bulanan Siswa", 350000, 0, 150000, 0},
+		{fmt.Sprintf("%04d-%02d-05", y, m), "BKM-004", "Bpk. H. Ahmad Dahlan", "Titipan Khusus Dana Ikrom / Bisaroh Guru", 0, 0, 3000000, 0},
+		{fmt.Sprintf("%04d-%02d-08", y, m), "BKK-001", "Ustadz Fauzi & Pengajar", "Bisaroh / Honor Guru Pengajar", 0, 0, 0, 2500000},
+		{fmt.Sprintf("%04d-%02d-10", y, m), "BKK-002", "PLN & PDAM", "Pembayaran Listrik & Air Kelas", 0, 650000, 0, 0},
+		{fmt.Sprintf("%04d-%02d-12", y, m), "BKM-005", "Nur Aini Rahmawati", "Iuran Kas & Infaq Bulanan Siswa", 350000, 0, 150000, 0},
+		{fmt.Sprintf("%04d-%02d-15", y, m), "BKM-006", "Bilal Ramadhan", "Iuran Kas & Infaq Bulanan Siswa", 350000, 0, 150000, 0},
+		{fmt.Sprintf("%04d-%02d-18", y, m), "BKK-003", "Toko ATK Berkah", "Pembelian Perlengkapan Kelas", 0, 350000, 0, 0},
+		{fmt.Sprintf("%04d-%02d-20", y, m), "BKK-004", "Ustadz Tamu", "Bisaroh Pembicara Kajian", 0, 0, 0, 400000},
+	}
+
+	for _, item := range samples {
 		_, err := CreateTransaction(models.TransactionInput{
-			Date:        item.Date,
-			RefNo:       item.RefNo,
-			Description: item.Description,
-			Category:    item.Category,
-			KasIn:       item.KasIn,
-			KasOut:      item.KasOut,
-			IkromIn:     item.IkromIn,
-			IkromOut:    item.IkromOut,
+			Date: item.Date, RefNo: item.RefNo, Name: item.Name, Description: item.Desc,
+			KasIn: item.KasIn, KasOut: item.KasOut, IkromIn: item.IkromIn, IkromOut: item.IkromOut,
 		})
 		if err != nil {
 			return err

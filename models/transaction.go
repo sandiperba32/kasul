@@ -2,13 +2,13 @@ package models
 
 import "time"
 
-// Transaction represents a multi-column cash book entry for Kas & Ikrom
+// Transaction represents a cash book entry for Kas & Ikrom with Nama and Keterangan
 type Transaction struct {
 	ID           int64     `json:"id"`
 	Date         string    `json:"date"`          // Format: YYYY-MM-DD
 	RefNo        string    `json:"ref_no"`        // Nomor Bukti/Kwitansi (e.g. BKM-001)
+	Name         string    `json:"name"`          // Nama Siswa / Donatur / Penerima
 	Description  string    `json:"description"`   // Keterangan / Uraian
-	Category     string    `json:"category"`      // Kategori (e.g. Infaq, Bisaroh, Operasional)
 	KasIn        float64   `json:"kas_in"`        // Kas Masuk
 	KasOut       float64   `json:"kas_out"`       // Kas Keluar
 	IkromIn      float64   `json:"ikrom_in"`      // Ikrom Masuk
@@ -24,12 +24,27 @@ type Transaction struct {
 type TransactionInput struct {
 	Date        string  `json:"date"`
 	RefNo       string  `json:"ref_no"`
+	Name        string  `json:"name"`
 	Description string  `json:"description"`
-	Category    string  `json:"category"`
 	KasIn       float64 `json:"kas_in"`
 	KasOut      float64 `json:"kas_out"`
 	IkromIn     float64 `json:"ikrom_in"`
 	IkromOut    float64 `json:"ikrom_out"`
+}
+
+// Student represents Master Data Siswa - hanya Nama dan Nama Orang Tua
+type Student struct {
+	ID        int64     `json:"id"`
+	Name      string    `json:"name"`       // Nama Lengkap Siswa
+	Parent    string    `json:"parent"`     // Nama Orang Tua / Wali
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// StudentInput is the payload received when creating or updating a student
+type StudentInput struct {
+	Name   string `json:"name"`
+	Parent string `json:"parent"`
 }
 
 // Summary provides aggregate metrics for the dashboard
@@ -55,14 +70,7 @@ type Summary struct {
 	PeriodKeluar   float64 `json:"period_keluar"`
 
 	TransactionCount int `json:"transaction_count"`
-}
-
-// Category represents transaction categories
-type Category struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
-	Type string `json:"type"` // "in", "out", "both"
-	Pos  string `json:"pos"`  // "kas", "ikrom", "all"
+	StudentCount     int `json:"student_count"`
 }
 
 // MonthlyStats provides monthly trend data for charts

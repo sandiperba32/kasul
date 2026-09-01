@@ -4,832 +4,740 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aplikasi Buku Kas & Dana Ikrom</title>
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        brand: {
-                            50: '#f0fdf4',
-                            100: '#dcfce7',
-                            500: '#10b981',
-                            600: '#059669',
-                            700: '#047857',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- Vue 3 CDN -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-    <!-- Custom Style -->
     <link rel="stylesheet" href="/style.css">
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
-    <div id="app" class="flex-1 flex flex-col">
-        <!-- TOP HEADER / NAVBAR (no-print) -->
-        <header class="no-print bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between items-center h-16">
-                    <!-- Brand & Tabs -->
-                    <div class="flex items-center space-x-6">
-                        <div class="flex items-center space-x-3 cursor-pointer" @click="activeTab = 'ledger'">
-                            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-200">
-                                <i class="fa-solid fa-book-bookmark text-lg"></i>
-                            </div>
-                            <div>
-                                <h1 class="font-bold text-lg leading-tight text-slate-900 flex items-center gap-2">
-                                    SI-KAS & IKROM
-                                    <span class="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full">v1.0</span>
-                                </h1>
-                                <p class="text-xs text-slate-500 font-medium">Buku Kas: Kas Umum &bull; Dana Ikrom</p>
-                            </div>
-                        </div>
+<div id="app" class="flex-1 flex flex-col">
 
-                        <!-- Nav Tabs -->
-                        <nav class="hidden md:flex space-x-1 border-l border-slate-200 pl-6">
-                            <button @click="activeTab = 'ledger'" 
-                                    :class="activeTab === 'ledger' ? 'bg-emerald-50 text-emerald-700 font-semibold shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'"
-                                    class="px-3 py-1.5 rounded-lg text-sm transition-all flex items-center gap-2">
-                                <i class="fa-solid fa-table-columns"></i>
-                                Buku Kas Tabelar
-                            </button>
-                            <button @click="activeTab = 'charts'" 
-                                    :class="activeTab === 'charts' ? 'bg-emerald-50 text-emerald-700 font-semibold shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'"
-                                    class="px-3 py-1.5 rounded-lg text-sm transition-all flex items-center gap-2">
-                                <i class="fa-solid fa-chart-pie"></i>
-                                Grafik & Analitik
-                            </button>
-                            <button @click="showCategoryModal = true" 
-                                    class="px-3 py-1.5 rounded-lg text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all flex items-center gap-2">
-                                <i class="fa-solid fa-tags"></i>
-                                Kategori
-                            </button>
-                        </nav>
+    <!-- ══════════════ HEADER / NAVBAR ══════════════ -->
+    <header class="no-print bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
+
+            <!-- Brand -->
+            <div class="flex items-center space-x-6">
+                <div class="flex items-center space-x-3 cursor-pointer" @click="activeTab='ledger'">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-200">
+                        <i class="fa-solid fa-book-bookmark text-lg"></i>
                     </div>
+                    <div>
+                        <h1 class="font-bold text-lg leading-tight text-slate-900 flex items-center gap-2">
+                            SI-KAS & IKROM
+                            <span class="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full">v1.2</span>
+                        </h1>
+                        <p class="text-xs text-slate-500 font-medium">Buku Kas &bull; Dana Ikrom &bull; Master Siswa</p>
+                    </div>
+                </div>
 
-                    <!-- Quick Actions -->
-                    <div class="flex items-center space-x-2">
-                        <button @click="openCreateModal" 
-                                class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-sm hover:shadow transition-all flex items-center gap-2">
-                            <i class="fa-solid fa-plus-circle"></i>
-                            <span class="hidden sm:inline">Tambah</span> Transaksi
+                <!-- Tabs -->
+                <nav class="hidden md:flex space-x-1 border-l border-slate-200 pl-6">
+                    <button @click="activeTab='ledger'"
+                            :class="activeTab==='ledger' ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'text-slate-600 hover:bg-slate-100'"
+                            class="px-3 py-1.5 rounded-lg text-sm transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-table-columns"></i> Buku Kas
+                    </button>
+                    <button @click="activeTab='students'"
+                            :class="activeTab==='students' ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'text-slate-600 hover:bg-slate-100'"
+                            class="px-3 py-1.5 rounded-lg text-sm transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-graduation-cap"></i> Master Siswa
+                        <span v-if="summary.student_count > 0" class="text-[10px] bg-indigo-100 text-indigo-800 font-bold px-1.5 py-0.5 rounded-full">{{ summary.student_count }}</span>
+                    </button>
+                    <button @click="activeTab='charts'"
+                            :class="activeTab==='charts' ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'text-slate-600 hover:bg-slate-100'"
+                            class="px-3 py-1.5 rounded-lg text-sm transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-chart-pie"></i> Grafik
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center space-x-2">
+                <button v-if="activeTab==='students'" @click="openCreateStudentModal"
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-sm flex items-center gap-2">
+                    <i class="fa-solid fa-user-plus"></i> Tambah Siswa
+                </button>
+                <button v-else @click="openCreateModal"
+                        class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-sm flex items-center gap-2">
+                    <i class="fa-solid fa-plus-circle"></i> <span class="hidden sm:inline">Tambah</span> Transaksi
+                </button>
+                <button @click="openPrintModal" class="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-sm font-medium px-3 py-2 rounded-lg flex items-center gap-1.5">
+                    <i class="fa-solid fa-print"></i> <span class="hidden md:inline">Cetak</span>
+                </button>
+                <button @click="exportCSV" class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-sm font-medium px-3 py-2 rounded-lg flex items-center gap-1.5">
+                    <i class="fa-solid fa-file-excel text-emerald-600"></i> <span class="hidden md:inline">Excel</span>
+                </button>
+                <div class="relative group">
+                    <button class="bg-slate-100 hover:bg-slate-200 text-slate-600 p-2 rounded-lg">
+                        <i class="fa-solid fa-ellipsis-vertical"></i>
+                    </button>
+                    <div class="absolute right-0 mt-1 w-48 bg-white rounded-xl shadow-lg border border-slate-100 py-1 hidden group-hover:block z-50">
+                        <button @click="seedDemoData" class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                            <i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i> Muat Data Contoh
                         </button>
-                        <button @click="openPrintModal" 
-                                class="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-sm font-medium px-3 py-2 rounded-lg transition-all flex items-center gap-1.5" title="Cetak / Download PDF">
-                            <i class="fa-solid fa-print"></i>
-                            <span class="hidden md:inline">Cetak / PDF</span>
+                        <button @click="resetAllData" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
+                            <i class="fa-solid fa-trash-can text-red-500"></i> Kosongkan Transaksi
                         </button>
-                        <button @click="exportCSV" 
-                                class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-sm font-medium px-3 py-2 rounded-lg transition-all flex items-center gap-1.5" title="Export ke Excel / CSV">
-                            <i class="fa-solid fa-file-excel text-emerald-600"></i>
-                            <span class="hidden md:inline">Excel</span>
-                        </button>
-                        
-                        <!-- More Options Dropdown -->
-                        <div class="relative group">
-                            <button class="bg-slate-100 hover:bg-slate-200 text-slate-600 p-2 rounded-lg transition-all">
-                                <i class="fa-solid fa-ellipsis-vertical"></i>
-                            </button>
-                            <div class="absolute right-0 mt-1 w-48 bg-white rounded-xl shadow-lg border border-slate-100 py-1 hidden group-hover:block z-50">
-                                <button @click="seedDemoData" class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2">
-                                    <i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i> Muat Data Contoh
-                                </button>
-                                <button @click="resetAllData" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
-                                    <i class="fa-solid fa-trash-can text-red-500"></i> Kosongkan Data
-                                </button>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
-        </header>
+        </div>
+    </header>
 
-        <!-- MAIN CONTENT CONTAINER -->
-        <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-1">
-            
-            <!-- 1. SUMMARY DASHBOARD CARDS (Kas & Ikrom & Total) -->
-            <section class="no-print grid grid-cols-1 md:grid-cols-3 gap-4">
-                
-                <!-- Card 1: Kas Utama -->
-                <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-all relative overflow-hidden group">
-                    <div class="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-100/70 px-2.5 py-1 rounded-md">
-                            <i class="fa-solid fa-wallet mr-1"></i> Kas Utama
-                        </span>
-                        <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                            <i class="fa-solid fa-arrow-trend-up text-sm"></i>
-                        </div>
-                    </div>
-                    <div class="space-y-1">
-                        <p class="text-xs text-slate-500 font-medium">Saldo Kas Saat Ini</p>
-                        <h3 class="text-2xl font-bold text-slate-900">{{ formatRupiah(summary.saldo_kas) }}</h3>
-                    </div>
-                    <div class="mt-3 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs">
-                        <div>
-                            <span class="text-slate-400 block">Masuk</span>
-                            <span class="font-semibold text-emerald-600">+{{ formatRupiah(summary.total_kas_in) }}</span>
-                        </div>
-                        <div>
-                            <span class="text-slate-400 block">Keluar</span>
-                            <span class="font-semibold text-red-500">-{{ formatRupiah(summary.total_kas_out) }}</span>
-                        </div>
+    <!-- ══════════════ MAIN ══════════════ -->
+    <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-1">
+
+        <!-- ── Dashboard Cards ── -->
+        <section class="no-print grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Kas -->
+            <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-all relative overflow-hidden">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-100/70 px-2.5 py-1 rounded-md">
+                        <i class="fa-solid fa-wallet mr-1"></i> Kas Utama
+                    </span>
+                    <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                        <i class="fa-solid fa-arrow-trend-up text-sm"></i>
                     </div>
                 </div>
+                <p class="text-xs text-slate-500 font-medium">Saldo Kas Saat Ini</p>
+                <h3 class="text-2xl font-bold text-slate-900 mt-1">{{ formatRupiah(summary.saldo_kas) }}</h3>
+                <div class="mt-3 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs">
+                    <div><span class="text-slate-400 block">Masuk</span><span class="font-semibold text-emerald-600">+{{ formatRupiah(summary.total_kas_in) }}</span></div>
+                    <div><span class="text-slate-400 block">Keluar</span><span class="font-semibold text-red-500">-{{ formatRupiah(summary.total_kas_out) }}</span></div>
+                </div>
+            </div>
 
-                <!-- Card 2: Dana Ikrom -->
-                <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-all relative overflow-hidden group">
-                    <div class="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="text-xs font-bold uppercase tracking-wider text-blue-700 bg-blue-100/70 px-2.5 py-1 rounded-md">
-                            <i class="fa-solid fa-hand-holding-heart mr-1"></i> Dana Ikrom
-                        </span>
-                        <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                            <i class="fa-solid fa-users text-sm"></i>
-                        </div>
-                    </div>
-                    <div class="space-y-1">
-                        <p class="text-xs text-slate-500 font-medium">Saldo Ikrom (Honor/Bisaroh)</p>
-                        <h3 class="text-2xl font-bold text-slate-900">{{ formatRupiah(summary.saldo_ikrom) }}</h3>
-                    </div>
-                    <div class="mt-3 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs">
-                        <div>
-                            <span class="text-slate-400 block">Masuk</span>
-                            <span class="font-semibold text-blue-600">+{{ formatRupiah(summary.total_ikrom_in) }}</span>
-                        </div>
-                        <div>
-                            <span class="text-slate-400 block">Keluar</span>
-                            <span class="font-semibold text-red-500">-{{ formatRupiah(summary.total_ikrom_out) }}</span>
-                        </div>
+            <!-- Ikrom -->
+            <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-all relative overflow-hidden">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-bold uppercase tracking-wider text-blue-700 bg-blue-100/70 px-2.5 py-1 rounded-md">
+                        <i class="fa-solid fa-hand-holding-heart mr-1"></i> Dana Ikrom
+                    </span>
+                    <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                        <i class="fa-solid fa-users text-sm"></i>
                     </div>
                 </div>
+                <p class="text-xs text-slate-500 font-medium">Saldo Ikrom (Honor/Bisaroh)</p>
+                <h3 class="text-2xl font-bold text-slate-900 mt-1">{{ formatRupiah(summary.saldo_ikrom) }}</h3>
+                <div class="mt-3 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs">
+                    <div><span class="text-slate-400 block">Masuk</span><span class="font-semibold text-blue-600">+{{ formatRupiah(summary.total_ikrom_in) }}</span></div>
+                    <div><span class="text-slate-400 block">Keluar</span><span class="font-semibold text-red-500">-{{ formatRupiah(summary.total_ikrom_out) }}</span></div>
+                </div>
+            </div>
 
-                <!-- Card 3: Total Saldo Gabungan -->
-                <div class="bg-gradient-to-br from-purple-900 to-indigo-900 text-white rounded-2xl p-5 shadow-md shadow-purple-900/20 relative overflow-hidden group">
-                    <div class="absolute top-0 right-0 w-28 h-28 bg-white/5 rounded-bl-full -mr-6 -mt-6"></div>
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="text-xs font-bold uppercase tracking-wider text-purple-200 bg-white/10 px-2.5 py-1 rounded-md">
-                            <i class="fa-solid fa-vault mr-1"></i> Grand Total Saldo
-                        </span>
-                        <div class="w-8 h-8 rounded-lg bg-white/10 text-purple-200 flex items-center justify-center">
-                            <i class="fa-solid fa-coins text-sm"></i>
-                        </div>
-                    </div>
-                    <div class="space-y-1">
-                        <p class="text-xs text-purple-200 font-medium">Total Akumulasi (Kas + Ikrom)</p>
-                        <h3 class="text-2xl font-extrabold tracking-tight">{{ formatRupiah(summary.total_saldo) }}</h3>
-                    </div>
-                    <div class="mt-3 pt-3 border-t border-white/10 grid grid-cols-2 gap-2 text-xs text-purple-200">
-                        <div>
-                            <span class="text-purple-300 block">Total Masuk</span>
-                            <span class="font-semibold text-emerald-300">+{{ formatRupiah(summary.total_masuk) }}</span>
-                        </div>
-                        <div>
-                            <span class="text-purple-300 block">Total Keluar</span>
-                            <span class="font-semibold text-rose-300">-{{ formatRupiah(summary.total_keluar) }}</span>
-                        </div>
+            <!-- Grand Total -->
+            <div class="bg-gradient-to-br from-purple-900 to-indigo-900 text-white rounded-2xl p-5 shadow-md relative overflow-hidden">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-bold uppercase tracking-wider text-purple-200 bg-white/10 px-2.5 py-1 rounded-md">
+                        <i class="fa-solid fa-vault mr-1"></i> Grand Total
+                    </span>
+                    <div class="w-8 h-8 rounded-lg bg-white/10 text-purple-200 flex items-center justify-center">
+                        <i class="fa-solid fa-coins text-sm"></i>
                     </div>
                 </div>
+                <p class="text-xs text-purple-200 font-medium">Total Akumulasi (Kas + Ikrom)</p>
+                <h3 class="text-2xl font-extrabold mt-1">{{ formatRupiah(summary.total_saldo) }}</h3>
+                <div class="mt-3 pt-3 border-t border-white/10 grid grid-cols-2 gap-2 text-xs">
+                    <div><span class="text-purple-300 block">Total Masuk</span><span class="font-semibold text-emerald-300">+{{ formatRupiah(summary.total_masuk) }}</span></div>
+                    <div><span class="text-purple-300 block">Total Keluar</span><span class="font-semibold text-rose-300">-{{ formatRupiah(summary.total_keluar) }}</span></div>
+                </div>
+            </div>
+        </section>
 
+        <!-- ══════════════ TAB 1: BUKU KAS ══════════════ -->
+        <div v-show="activeTab==='ledger'" class="space-y-4">
+
+            <!-- Filter Bar -->
+            <section class="no-print bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-3">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl text-xs font-medium">
+                        <button @click="setPeriod('all')"        :class="filters.periodPreset==='all'        ? 'bg-white text-slate-900 shadow-xs font-semibold' : 'text-slate-600'" class="px-3 py-1.5 rounded-lg transition-all">Semua</button>
+                        <button @click="setPeriod('today')"      :class="filters.periodPreset==='today'      ? 'bg-white text-slate-900 shadow-xs font-semibold' : 'text-slate-600'" class="px-3 py-1.5 rounded-lg transition-all">Hari Ini</button>
+                        <button @click="setPeriod('this_month')" :class="filters.periodPreset==='this_month' ? 'bg-white text-slate-900 shadow-xs font-semibold' : 'text-slate-600'" class="px-3 py-1.5 rounded-lg transition-all">Bulan Ini</button>
+                        <button @click="setPeriod('last_month')" :class="filters.periodPreset==='last_month' ? 'bg-white text-slate-900 shadow-xs font-semibold' : 'text-slate-600'" class="px-3 py-1.5 rounded-lg transition-all">Bulan Lalu</button>
+                        <button @click="setPeriod('this_year')"  :class="filters.periodPreset==='this_year'  ? 'bg-white text-slate-900 shadow-xs font-semibold' : 'text-slate-600'" class="px-3 py-1.5 rounded-lg transition-all">Tahun Ini</button>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-lg text-xs">
+                            <span class="text-slate-500 font-medium">Dari:</span>
+                            <input type="date" v-model="filters.startDate" @change="refreshAll" class="bg-transparent text-slate-800 focus:outline-none font-medium">
+                            <span class="text-slate-400">s/d</span>
+                            <input type="date" v-model="filters.endDate" @change="refreshAll" class="bg-transparent text-slate-800 focus:outline-none font-medium">
+                        </div>
+                        <select v-model="filters.pos" @change="fetchTransactions" class="text-xs bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg font-semibold text-slate-700 focus:outline-none">
+                            <option value="all">Semua Pos (Kas & Ikrom)</option>
+                            <option value="kas">💼 Kas Utama</option>
+                            <option value="ikrom">🤲 Dana Ikrom</option>
+                        </select>
+                        <button @click="resetFilters" class="text-xs text-slate-500 hover:text-slate-800 px-2 py-1.5 rounded-md hover:bg-slate-100">
+                            <i class="fa-solid fa-rotate-left mr-1"></i> Reset
+                        </button>
+                    </div>
+                </div>
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-sm"></i>
+                    <input type="text" v-model="searchInput" placeholder="Cari nama siswa, keterangan, atau nomor bukti..."
+                           class="w-full bg-slate-50 border border-slate-200 pl-10 pr-4 py-2 rounded-xl text-sm placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all">
+                </div>
             </section>
 
-            <!-- TAB 1: BUKU KAS TABELAR -->
-            <div v-show="activeTab === 'ledger'" class="space-y-4">
-                
-                <!-- 2. FILTER & TOOLBAR (no-print) -->
-                <section class="no-print bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-3">
-                    <div class="flex flex-wrap items-center justify-between gap-3">
-                        
-                        <!-- Quick Period Selector -->
-                        <div class="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl text-xs font-medium">
-                            <button @click="setPeriod('all')" 
-                                    :class="filters.periodPreset === 'all' ? 'bg-white text-slate-900 shadow-xs font-semibold' : 'text-slate-600 hover:text-slate-900'"
-                                    class="px-3 py-1.5 rounded-lg transition-all">Semua</button>
-                            <button @click="setPeriod('today')" 
-                                    :class="filters.periodPreset === 'today' ? 'bg-white text-slate-900 shadow-xs font-semibold' : 'text-slate-600 hover:text-slate-900'"
-                                    class="px-3 py-1.5 rounded-lg transition-all">Hari Ini</button>
-                            <button @click="setPeriod('this_month')" 
-                                    :class="filters.periodPreset === 'this_month' ? 'bg-white text-slate-900 shadow-xs font-semibold' : 'text-slate-600 hover:text-slate-900'"
-                                    class="px-3 py-1.5 rounded-lg transition-all">Bulan Ini</button>
-                            <button @click="setPeriod('last_month')" 
-                                    :class="filters.periodPreset === 'last_month' ? 'bg-white text-slate-900 shadow-xs font-semibold' : 'text-slate-600 hover:text-slate-900'"
-                                    class="px-3 py-1.5 rounded-lg transition-all">Bulan Lalu</button>
-                            <button @click="setPeriod('this_year')" 
-                                    :class="filters.periodPreset === 'this_year' ? 'bg-white text-slate-900 shadow-xs font-semibold' : 'text-slate-600 hover:text-slate-900'"
-                                    class="px-3 py-1.5 rounded-lg transition-all">Tahun Ini</button>
-                        </div>
-
-                        <!-- Date Range & Filters -->
-                        <div class="flex flex-wrap items-center gap-2">
-                            <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-lg text-xs">
-                                <span class="text-slate-500 font-medium">Dari:</span>
-                                <input type="date" v-model="filters.startDate" @change="refreshAll" class="bg-transparent text-slate-800 focus:outline-hidden font-medium">
-                                <span class="text-slate-400">s/d</span>
-                                <input type="date" v-model="filters.endDate" @change="refreshAll" class="bg-transparent text-slate-800 focus:outline-hidden font-medium">
-                            </div>
-
-                            <!-- Pos Filter Dropdown -->
-                            <select v-model="filters.pos" @change="fetchTransactions" class="text-xs bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg font-medium text-slate-700 focus:outline-hidden focus:ring-2 focus:ring-emerald-500">
-                                <option value="all">Semua Pos (Kas & Ikrom)</option>
-                                <option value="kas">Pos Kas Utama Saja</option>
-                                <option value="ikrom">Pos Dana Ikrom Saja</option>
-                            </select>
-
-                            <!-- Category Filter Dropdown -->
-                            <select v-model="filters.category" @change="fetchTransactions" class="text-xs bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg font-medium text-slate-700 focus:outline-hidden focus:ring-2 focus:ring-emerald-500">
-                                <option value="Semua">Semua Kategori</option>
-                                <option v-for="c in categories" :key="c.id" :value="c.name">{{ c.name }}</option>
-                            </select>
-
-                            <button @click="resetFilters" class="text-xs text-slate-500 hover:text-slate-800 px-2 py-1.5 rounded-md hover:bg-slate-100 transition-all" title="Reset Filter">
-                                <i class="fa-solid fa-rotate-left mr-1"></i> Reset
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Search Input -->
-                    <div class="relative">
-                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-sm"></i>
-                        <input type="text" v-model="searchInput" placeholder="Cari keterangan transaksi, nomor bukti, atau kategori..." 
-                               class="w-full bg-slate-50 border border-slate-200 pl-10 pr-4 py-2 rounded-xl text-sm placeholder-slate-400 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all">
-                    </div>
-                </section>
-
-                <!-- 3. MULTI-COLUMN LEDGER TABLE (Kas & Ikrom) -->
-                <section class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="kas-table w-full text-left border-collapse text-xs">
-                            <!-- Table Header Grouping -->
-                            <thead>
-                                <tr class="bg-slate-100/80 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
-                                    <th rowspan="2" class="py-3 px-3 text-center border-r border-slate-200 w-10">No</th>
-                                    <th rowspan="2" class="py-3 px-3 border-r border-slate-200 w-24">Tanggal</th>
-                                    <th rowspan="2" class="py-3 px-3 border-r border-slate-200 w-24">No. Bukti</th>
-                                    <th rowspan="2" class="py-3 px-4 border-r border-slate-200 min-w-[220px]">Uraian / Keterangan</th>
-                                    <th rowspan="2" class="py-3 px-3 border-r border-slate-200 w-28">Kategori</th>
-                                    
-                                    <!-- KAS Group Header -->
-                                    <th colspan="3" class="py-2 px-2 text-center border-r border-emerald-200 pos-kas-header">
-                                        <i class="fa-solid fa-wallet mr-1"></i> POS KAS UTAMA
-                                    </th>
-                                    
-                                    <!-- IKROM Group Header -->
-                                    <th colspan="3" class="py-2 px-2 text-center border-r border-blue-200 pos-ikrom-header">
-                                        <i class="fa-solid fa-hand-holding-heart mr-1"></i> POS DANA IKROM
-                                    </th>
-
-                                    <!-- TOTAL & ACTION -->
-                                    <th rowspan="2" class="py-3 px-3 text-center border-r border-purple-200 pos-total-header">
-                                        <i class="fa-solid fa-vault mr-1"></i> TOTAL SALDO
-                                    </th>
-                                    <th rowspan="2" class="py-3 px-3 text-center no-print w-20">Aksi</th>
-                                </tr>
-                                <tr class="bg-slate-50 border-b border-slate-200 font-semibold text-[10px] text-slate-600">
-                                    <!-- KAS Columns -->
-                                    <th class="py-2 px-2 text-right border-r border-emerald-100 bg-emerald-50/50 text-emerald-800">Masuk</th>
-                                    <th class="py-2 px-2 text-right border-r border-emerald-100 bg-emerald-50/50 text-red-700">Keluar</th>
-                                    <th class="py-2 px-2 text-right border-r border-emerald-200 bg-emerald-100/40 text-slate-800 font-bold">Saldo Kas</th>
-
-                                    <!-- IKROM Columns -->
-                                    <th class="py-2 px-2 text-right border-r border-blue-100 bg-blue-50/50 text-blue-800">Masuk</th>
-                                    <th class="py-2 px-2 text-right border-r border-blue-100 bg-blue-50/50 text-red-700">Keluar</th>
-                                    <th class="py-2 px-2 text-right border-r border-blue-200 bg-blue-100/40 text-slate-800 font-bold">Saldo Ikrom</th>
-                                </tr>
-                            </thead>
-
-                            <!-- Table Body -->
-                            <tbody class="divide-y divide-slate-100">
-                                <tr v-if="loading">
-                                    <td colspan="13" class="py-12 text-center text-slate-400">
-                                        <i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2 text-emerald-600"></i>
-                                        <p class="text-sm font-medium">Memuat data transaksi...</p>
-                                    </td>
-                                </tr>
-
-                                <tr v-else-if="transactions.length === 0">
-                                    <td colspan="13" class="py-12 text-center text-slate-400">
-                                        <i class="fa-regular fa-folder-open text-3xl mb-2 text-slate-300"></i>
-                                        <p class="text-sm font-medium text-slate-600">Tidak ada data transaksi yang ditemukan</p>
-                                        <p class="text-xs text-slate-400 mt-1">Coba ubah filter periode atau klik "+ Tambah Transaksi"</p>
-                                        <button @click="openCreateModal" class="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg hover:bg-emerald-100">
-                                            <i class="fa-solid fa-plus"></i> Tambah Transaksi Baru
+            <!-- Ledger Table -->
+            <section class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="kas-table w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-100/80 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
+                                <th rowspan="2" class="py-3 px-3 text-center border-r border-slate-200 w-10">No</th>
+                                <th rowspan="2" class="py-3 px-3 border-r border-slate-200 w-24">Tanggal</th>
+                                <th rowspan="2" class="py-3 px-3 border-r border-slate-200 w-28">No. Bukti</th>
+                                <th rowspan="2" class="py-3 px-4 border-r border-slate-200 min-w-[160px]">Nama Siswa / Pihak</th>
+                                <th rowspan="2" class="py-3 px-4 border-r border-slate-200 min-w-[200px]">Uraian / Keterangan</th>
+                                <th colspan="3" class="py-2 px-2 text-center border-r border-emerald-200 pos-kas-header">
+                                    <i class="fa-solid fa-wallet mr-1"></i> POS KAS UTAMA
+                                </th>
+                                <th colspan="3" class="py-2 px-2 text-center border-r border-blue-200 pos-ikrom-header">
+                                    <i class="fa-solid fa-hand-holding-heart mr-1"></i> POS DANA IKROM
+                                </th>
+                                <th rowspan="2" class="py-3 px-4 text-center border-r border-purple-200 pos-total-header">
+                                    <i class="fa-solid fa-vault mr-1"></i> TOTAL SALDO
+                                </th>
+                                <th rowspan="2" class="py-3 px-3 text-center no-print w-20">Aksi</th>
+                            </tr>
+                            <tr class="bg-slate-50 border-b border-slate-200 text-[10px] text-slate-600">
+                                <th class="py-2 px-3 text-right border-r border-emerald-100 bg-emerald-50/50 text-emerald-800">Masuk</th>
+                                <th class="py-2 px-3 text-right border-r border-emerald-100 bg-emerald-50/50 text-red-700">Keluar</th>
+                                <th class="py-2 px-3 text-right border-r border-emerald-200 bg-emerald-100/40 font-bold">Saldo Kas</th>
+                                <th class="py-2 px-3 text-right border-r border-blue-100 bg-blue-50/50 text-blue-800">Masuk</th>
+                                <th class="py-2 px-3 text-right border-r border-blue-100 bg-blue-50/50 text-red-700">Keluar</th>
+                                <th class="py-2 px-3 text-right border-r border-blue-200 bg-blue-100/40 font-bold">Saldo Ikrom</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr v-if="loading">
+                                <td colspan="13" class="py-12 text-center text-slate-400">
+                                    <i class="fa-solid fa-circle-notch fa-spin text-2xl text-emerald-600"></i>
+                                    <p class="text-sm mt-2">Memuat data...</p>
+                                </td>
+                            </tr>
+                            <tr v-else-if="transactions.length === 0">
+                                <td colspan="13" class="py-12 text-center text-slate-400">
+                                    <i class="fa-regular fa-folder-open text-3xl text-slate-300"></i>
+                                    <p class="text-sm font-medium text-slate-600 mt-2">Tidak ada data transaksi</p>
+                                    <button @click="openCreateModal" class="mt-2 text-xs font-semibold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg hover:bg-emerald-100">
+                                        + Tambah Transaksi
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr v-for="(t, idx) in transactions" :key="t.id" class="hover:bg-slate-50/80 transition-colors">
+                                <td class="py-2.5 px-3 text-center border-r border-slate-100 text-slate-500">{{ idx+1 }}</td>
+                                <td class="py-2.5 px-3 border-r border-slate-100 font-medium text-slate-700 whitespace-nowrap">{{ formatDate(t.date) }}</td>
+                                <td class="py-2.5 px-3 border-r border-slate-100 text-slate-500 font-mono text-[11px]">{{ t.ref_no || '-' }}</td>
+                                <td class="py-2.5 px-4 border-r border-slate-100 font-semibold text-slate-900 max-w-[180px] truncate">
+                                    <span class="inline-flex items-center gap-1.5 cursor-pointer hover:text-emerald-600 transition-colors"
+                                          @click="t.name ? filterByStudent(t.name) : null" :title="t.name">
+                                        <i class="fa-solid fa-user-graduate text-slate-400 text-[11px]"></i>
+                                        {{ t.name || '-' }}
+                                    </span>
+                                </td>
+                                <td class="py-2.5 px-4 border-r border-slate-100 text-slate-700 max-w-sm truncate" :title="t.description">{{ t.description }}</td>
+                                <td class="py-2.5 px-3 text-right border-r border-emerald-50 font-medium" :class="t.kas_in>0 ? 'text-emerald-600 bg-emerald-50/20' : 'text-slate-300'">{{ t.kas_in>0 ? formatRupiah(t.kas_in) : '-' }}</td>
+                                <td class="py-2.5 px-3 text-right border-r border-emerald-50 font-medium" :class="t.kas_out>0 ? 'text-red-500 bg-red-50/20' : 'text-slate-300'">{{ t.kas_out>0 ? formatRupiah(t.kas_out) : '-' }}</td>
+                                <td class="py-2.5 px-3 text-right border-r border-slate-200 font-bold text-slate-800 bg-emerald-50/30">{{ formatRupiah(t.kas_balance) }}</td>
+                                <td class="py-2.5 px-3 text-right border-r border-blue-50 font-medium" :class="t.ikrom_in>0 ? 'text-blue-600 bg-blue-50/20' : 'text-slate-300'">{{ t.ikrom_in>0 ? formatRupiah(t.ikrom_in) : '-' }}</td>
+                                <td class="py-2.5 px-3 text-right border-r border-blue-50 font-medium" :class="t.ikrom_out>0 ? 'text-red-500 bg-red-50/20' : 'text-slate-300'">{{ t.ikrom_out>0 ? formatRupiah(t.ikrom_out) : '-' }}</td>
+                                <td class="py-2.5 px-3 text-right border-r border-slate-200 font-bold text-slate-800 bg-blue-50/30">{{ formatRupiah(t.ikrom_balance) }}</td>
+                                <td class="py-2.5 px-4 text-right border-r border-slate-200 font-extrabold text-purple-900 bg-purple-50/40">{{ formatRupiah(t.total_balance) }}</td>
+                                <td class="py-2.5 px-2 text-center no-print">
+                                    <div class="flex items-center justify-center space-x-1">
+                                        <button @click="openEditModal(t)" class="text-slate-400 hover:text-blue-600 p-1 rounded hover:bg-blue-50" title="Edit">
+                                            <i class="fa-regular fa-pen-to-square"></i>
                                         </button>
-                                    </td>
-                                </tr>
+                                        <button @click="deleteTransaction(t.id, t.description)" class="text-slate-400 hover:text-red-600 p-1 rounded hover:bg-red-50" title="Hapus">
+                                            <i class="fa-regular fa-trash-can"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                        <tfoot v-if="transactions.length > 0" class="bg-slate-100 border-t-2 border-slate-300 font-bold text-slate-800">
+                            <tr>
+                                <td colspan="5" class="py-3 px-4 text-right text-[11px] uppercase tracking-wider border-r border-slate-200">Total Mutasi:</td>
+                                <td class="py-3 px-3 text-right border-r border-emerald-200 text-emerald-700">{{ formatRupiah(tableTotals.kasIn) }}</td>
+                                <td class="py-3 px-3 text-right border-r border-emerald-200 text-red-600">{{ formatRupiah(tableTotals.kasOut) }}</td>
+                                <td class="py-3 px-3 text-right border-r border-slate-300 bg-emerald-100/60 text-emerald-900">{{ formatRupiah(tableTotals.finalKasBalance) }}</td>
+                                <td class="py-3 px-3 text-right border-r border-blue-200 text-blue-700">{{ formatRupiah(tableTotals.ikromIn) }}</td>
+                                <td class="py-3 px-3 text-right border-r border-blue-200 text-red-600">{{ formatRupiah(tableTotals.ikromOut) }}</td>
+                                <td class="py-3 px-3 text-right border-r border-slate-300 bg-blue-100/60 text-blue-900">{{ formatRupiah(tableTotals.finalIkromBalance) }}</td>
+                                <td class="py-3 px-4 text-right bg-purple-100 text-purple-950 text-sm font-extrabold border-r">{{ formatRupiah(tableTotals.finalTotalBalance) }}</td>
+                                <td class="no-print"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </section>
+        </div>
 
-                                <tr v-for="(t, idx) in transactions" :key="t.id" class="hover:bg-slate-50/80 transition-colors">
-                                    <td class="py-2.5 px-3 text-center border-r border-slate-100 text-slate-500 font-medium">{{ idx + 1 }}</td>
-                                    <td class="py-2.5 px-3 border-r border-slate-100 font-medium text-slate-700">{{ formatDate(t.date) }}</td>
-                                    <td class="py-2.5 px-3 border-r border-slate-100 text-slate-500 font-mono text-[11px]">{{ t.ref_no || '-' }}</td>
-                                    <td class="py-2.5 px-4 border-r border-slate-100 font-medium text-slate-800 max-w-xs truncate" :title="t.description">{{ t.description }}</td>
-                                    <td class="py-2.5 px-3 border-r border-slate-100">
-                                        <span class="inline-block bg-slate-100 text-slate-600 text-[11px] px-2 py-0.5 rounded-md font-medium">{{ t.category }}</span>
-                                    </td>
+        <!-- ══════════════ TAB 2: MASTER DATA SISWA ══════════════ -->
+        <div v-show="activeTab==='students'" class="space-y-4">
 
-                                    <!-- KAS Values -->
-                                    <td class="py-2.5 px-2 text-right border-r border-emerald-50 font-medium" :class="t.kas_in > 0 ? 'text-emerald-600 bg-emerald-50/20' : 'text-slate-300'">
-                                        {{ t.kas_in > 0 ? formatRupiah(t.kas_in) : '-' }}
-                                    </td>
-                                    <td class="py-2.5 px-2 text-right border-r border-emerald-50 font-medium" :class="t.kas_out > 0 ? 'text-red-500 bg-red-50/20' : 'text-slate-300'">
-                                        {{ t.kas_out > 0 ? formatRupiah(t.kas_out) : '-' }}
-                                    </td>
-                                    <td class="py-2.5 px-2 text-right border-r border-slate-200 font-bold text-slate-800 bg-emerald-50/30">
-                                        {{ formatRupiah(t.kas_balance) }}
-                                    </td>
+            <!-- Toolbar -->
+            <section class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                        <i class="fa-solid fa-graduation-cap text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-900">Master Data Siswa</h3>
+                        <p class="text-xs text-slate-500">{{ students.length }} siswa terdaftar — data digunakan sebagai pilihan nama di form transaksi</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                        <input type="text" v-model="studentSearch" placeholder="Cari nama / wali..."
+                               class="bg-slate-50 border border-slate-200 pl-8 pr-3 py-1.5 rounded-lg text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-52">
+                    </div>
+                    <button @click="openCreateStudentModal"
+                            class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-xs flex items-center gap-1.5">
+                        <i class="fa-solid fa-plus"></i> Tambah Siswa
+                    </button>
+                </div>
+            </section>
 
-                                    <!-- IKROM Values -->
-                                    <td class="py-2.5 px-2 text-right border-r border-blue-50 font-medium" :class="t.ikrom_in > 0 ? 'text-blue-600 bg-blue-50/20' : 'text-slate-300'">
-                                        {{ t.ikrom_in > 0 ? formatRupiah(t.ikrom_in) : '-' }}
-                                    </td>
-                                    <td class="py-2.5 px-2 text-right border-r border-blue-50 font-medium" :class="t.ikrom_out > 0 ? 'text-red-500 bg-red-50/20' : 'text-slate-300'">
-                                        {{ t.ikrom_out > 0 ? formatRupiah(t.ikrom_out) : '-' }}
-                                    </td>
-                                    <td class="py-2.5 px-2 text-right border-r border-slate-200 font-bold text-slate-800 bg-blue-50/30">
-                                        {{ formatRupiah(t.ikrom_balance) }}
-                                    </td>
-
-                                    <!-- TOTAL SALDO -->
-                                    <td class="py-2.5 px-3 text-right border-r border-slate-200 font-extrabold text-purple-900 bg-purple-50/40">
-                                        {{ formatRupiah(t.total_balance) }}
-                                    </td>
-
-                                    <!-- Action Buttons (no-print) -->
-                                    <td class="py-2.5 px-2 text-center no-print">
-                                        <div class="flex items-center justify-center space-x-1">
-                                            <button @click="openEditModal(t)" class="text-slate-400 hover:text-blue-600 p-1 rounded-md hover:bg-blue-50 transition-colors" title="Edit Transaksi">
-                                                <i class="fa-regular fa-pen-to-square"></i>
-                                            </button>
-                                            <button @click="deleteTransaction(t.id, t.description)" class="text-slate-400 hover:text-red-600 p-1 rounded-md hover:bg-red-50 transition-colors" title="Hapus Transaksi">
-                                                <i class="fa-regular fa-trash-can"></i>
-                                            </button>
+            <!-- Students Table (kolom: No, Nama Siswa, Nama Orang Tua, Aksi) -->
+            <section class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-slate-100/80 border-b border-slate-200 text-slate-600 font-bold text-xs uppercase tracking-wider">
+                                <th class="py-3 px-4 border-r border-slate-200 w-12 text-center">No</th>
+                                <th class="py-3 px-5 border-r border-slate-200">Nama Lengkap Siswa</th>
+                                <th class="py-3 px-5 border-r border-slate-200">Nama Orang Tua / Wali</th>
+                                <th class="py-3 px-4 text-center w-36">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr v-if="studentLoading">
+                                <td colspan="4" class="py-12 text-center text-slate-400">
+                                    <i class="fa-solid fa-circle-notch fa-spin text-2xl text-indigo-500"></i>
+                                    <p class="text-sm mt-2">Memuat data siswa...</p>
+                                </td>
+                            </tr>
+                            <tr v-else-if="students.length === 0">
+                                <td colspan="4" class="py-12 text-center text-slate-400">
+                                    <i class="fa-solid fa-graduation-cap text-3xl text-slate-300"></i>
+                                    <p class="text-sm font-medium text-slate-600 mt-2">Belum ada data siswa</p>
+                                    <button @click="openCreateStudentModal" class="mt-2 text-xs font-semibold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100">
+                                        + Tambah Siswa Baru
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr v-for="(s, idx) in students" :key="s.id" class="hover:bg-slate-50/80 transition-colors">
+                                <td class="py-3 px-4 text-center border-r border-slate-100 text-slate-500 text-sm font-medium">{{ idx + 1 }}</td>
+                                <td class="py-3 px-5 border-r border-slate-100">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                                            {{ s.name.charAt(0).toUpperCase() }}
                                         </div>
-                                    </td>
-                                </tr>
-                            </tbody>
-
-                            <!-- Table Footer (Sum of Columns) -->
-                            <tfoot v-if="transactions.length > 0" class="bg-slate-100 border-t-2 border-slate-300 font-bold text-slate-800">
-                                <tr>
-                                    <td colspan="5" class="py-3 px-4 text-right uppercase tracking-wider text-[11px] border-r border-slate-200">
-                                        Total Mutasi Periode Ini:
-                                    </td>
-                                    <!-- KAS Totals -->
-                                    <td class="py-3 px-2 text-right border-r border-emerald-200 text-emerald-700">{{ formatRupiah(tableTotals.kasIn) }}</td>
-                                    <td class="py-3 px-2 text-right border-r border-emerald-200 text-red-600">{{ formatRupiah(tableTotals.kasOut) }}</td>
-                                    <td class="py-3 px-2 text-right border-r border-slate-300 bg-emerald-100/60 text-emerald-900">{{ formatRupiah(tableTotals.finalKasBalance) }}</td>
-
-                                    <!-- IKROM Totals -->
-                                    <td class="py-3 px-2 text-right border-r border-blue-200 text-blue-700">{{ formatRupiah(tableTotals.ikromIn) }}</td>
-                                    <td class="py-3 px-2 text-right border-r border-blue-200 text-red-600">{{ formatRupiah(tableTotals.ikromOut) }}</td>
-                                    <td class="py-3 px-2 text-right border-r border-slate-300 bg-blue-100/60 text-blue-900">{{ formatRupiah(tableTotals.finalIkromBalance) }}</td>
-
-                                    <!-- GRAND TOTAL -->
-                                    <td class="py-3 px-3 text-right bg-purple-100 text-purple-950 text-sm font-extrabold border-r border-slate-200">
-                                        {{ formatRupiah(tableTotals.finalTotalBalance) }}
-                                    </td>
-                                    <td class="no-print"></td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                </section>
-            </div>
-
-            <!-- TAB 2: GRAFIK & ANALITIK (no-print) -->
-            <div v-show="activeTab === 'charts'" class="no-print space-y-6">
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    
-                    <!-- Monthly Bar Chart -->
-                    <div class="lg:col-span-2 bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs">
-                        <div class="flex items-center justify-between mb-4">
-                            <div>
-                                <h3 class="font-bold text-slate-900">Pemasukan vs Pengeluaran per Bulan</h3>
-                                <p class="text-xs text-slate-500">Perbandingan arus kas per pos (Kas Utama & Dana Ikrom)</p>
-                            </div>
-                            <span class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-md font-medium">12 Bulan Terakhir</span>
-                        </div>
-                        <div class="h-80 w-full">
-                            <canvas id="monthlyChart"></canvas>
-                        </div>
-                    </div>
-
-                    <!-- Pos Distribution Chart -->
-                    <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs">
-                        <div class="flex items-center justify-between mb-4">
-                            <div>
-                                <h3 class="font-bold text-slate-900">Komposisi Saldo</h3>
-                                <p class="text-xs text-slate-500">Distribusi kas saat ini (Kas vs Ikrom)</p>
-                            </div>
-                        </div>
-                        <div class="h-80 w-full flex items-center justify-center">
-                            <canvas id="posChart"></canvas>
-                        </div>
-                    </div>
+                                        <span class="font-semibold text-slate-900">{{ s.name }}</span>
+                                    </div>
+                                </td>
+                                <td class="py-3 px-5 border-r border-slate-100 text-slate-600">
+                                    {{ s.parent || '-' }}
+                                </td>
+                                <td class="py-3 px-4 text-center">
+                                    <div class="flex items-center justify-center space-x-2">
+                                        <button @click="filterByStudent(s.name)"
+                                                class="text-slate-400 hover:text-emerald-600 p-1.5 rounded hover:bg-emerald-50 transition-colors"
+                                                title="Lihat Riwayat Transaksi">
+                                            <i class="fa-solid fa-receipt text-sm"></i>
+                                        </button>
+                                        <button @click="openEditStudentModal(s)"
+                                                class="text-slate-400 hover:text-blue-600 p-1.5 rounded hover:bg-blue-50 transition-colors"
+                                                title="Edit Siswa">
+                                            <i class="fa-regular fa-pen-to-square text-sm"></i>
+                                        </button>
+                                        <button @click="deleteStudent(s.id, s.name)"
+                                                class="text-slate-400 hover:text-red-600 p-1.5 rounded hover:bg-red-50 transition-colors"
+                                                title="Hapus Siswa">
+                                            <i class="fa-regular fa-trash-can text-sm"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
+            </section>
+        </div>
 
-                <!-- Cumulative Balance Trend Chart -->
+        <!-- ══════════════ TAB 3: GRAFIK ══════════════ -->
+        <div v-show="activeTab==='charts'" class="no-print space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs">
+                    <h3 class="font-bold text-slate-900 mb-1">Pemasukan vs Pengeluaran per Bulan</h3>
+                    <p class="text-xs text-slate-500 mb-4">Kas Utama & Dana Ikrom</p>
+                    <div class="h-80"><canvas id="monthlyChart"></canvas></div>
+                </div>
                 <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs">
-                    <div class="flex items-center justify-between mb-4">
-                        <div>
-                            <h3 class="font-bold text-slate-900">Tren Pertumbuhan Saldo Akumulasi</h3>
-                            <p class="text-xs text-slate-500">Pergerakan total saldo kumulatif berdasarkan riwayat transaksi</p>
-                        </div>
-                    </div>
-                    <div class="h-72 w-full">
-                        <canvas id="trendChart"></canvas>
-                    </div>
+                    <h3 class="font-bold text-slate-900 mb-1">Komposisi Saldo</h3>
+                    <p class="text-xs text-slate-500 mb-4">Distribusi Kas vs Ikrom</p>
+                    <div class="h-80 flex items-center"><canvas id="posChart"></canvas></div>
                 </div>
             </div>
-
-        </main>
-
-        <!-- FOOTER (no-print) -->
-        <footer class="no-print bg-white border-t border-slate-200 py-4 mt-auto">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
-                <p>&copy; 2026 Aplikasi Buku Kas & Dana Ikrom. Backend Golang + Vue 3 Frontend.</p>
-                <div class="flex items-center space-x-4">
-                    <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Database SQLite WAL Active</span>
-                    <span>Multi-Pos: Kas Utama &bull; Dana Ikrom</span>
-                </div>
-            </div>
-        </footer>
-
-        <!-- MODAL: TAMBAH / EDIT TRANSAKSI (no-print) -->
-        <div v-if="showModal" class="no-print fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-            <div class="bg-white rounded-2xl max-w-xl w-full shadow-2xl overflow-hidden border border-slate-100 animate-in fade-in zoom-in duration-150">
-                
-                <!-- Modal Header -->
-                <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
-                    <div class="flex items-center space-x-2">
-                        <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
-                            <i :class="isEditing ? 'fa-solid fa-pen-to-square' : 'fa-solid fa-plus'"></i>
-                        </div>
-                        <div>
-                            <h3 class="font-bold text-base">{{ isEditing ? 'Edit Transaksi' : 'Tambah Transaksi Baru' }}</h3>
-                            <p class="text-xs text-slate-400">Masukkan detail mutasi keuangan</p>
-                        </div>
-                    </div>
-                    <button @click="closeModal" class="text-slate-400 hover:text-white transition-colors">
-                        <i class="fa-solid fa-xmark text-lg"></i>
-                    </button>
-                </div>
-
-                <!-- Input Mode Toggle -->
-                <div class="px-6 pt-4 pb-2 bg-slate-50 border-b border-slate-200/80 flex items-center justify-between">
-                    <span class="text-xs font-semibold text-slate-600">Pilih Mode Input:</span>
-                    <div class="flex bg-slate-200/70 p-0.5 rounded-lg text-xs font-medium">
-                        <button type="button" @click="inputMode = 'single'" 
-                                :class="inputMode === 'single' ? 'bg-white text-emerald-700 shadow-xs font-bold' : 'text-slate-600'"
-                                class="px-3 py-1 rounded-md transition-all">
-                            <i class="fa-solid fa-bolt mr-1"></i> Input Cepat (Tunggal)
-                        </button>
-                        <button type="button" @click="inputMode = 'multi'" 
-                                :class="inputMode === 'multi' ? 'bg-white text-emerald-700 shadow-xs font-bold' : 'text-slate-600'"
-                                class="px-3 py-1 rounded-md transition-all">
-                            <i class="fa-solid fa-table-cells mr-1"></i> Multi-Pos (Majemuk)
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Modal Body Form -->
-                <form @submit.prevent="saveTransaction" class="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
-                    
-                    <!-- Row 1: Tanggal & No Bukti -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Tanggal <span class="text-red-500">*</span></label>
-                            <input type="date" v-model="form.date" required class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-hidden font-medium">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Nomor Bukti / Kuitansi</label>
-                            <input type="text" v-model="form.ref_no" placeholder="Contoh: BKM-001 / BKK-001" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-hidden font-mono">
-                        </div>
-                    </div>
-
-                    <!-- Row 2: Kategori & Keterangan -->
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div class="sm:col-span-1">
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Kategori</label>
-                            <select v-model="form.category" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-hidden font-medium">
-                                <option v-for="c in categories" :key="c.id" :value="c.name">{{ c.name }}</option>
-                            </select>
-                        </div>
-                        <div class="sm:col-span-2">
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Keterangan / Uraian <span class="text-red-500">*</span></label>
-                            <input type="text" v-model="form.description" required placeholder="Contoh: Infaq Jamaah / Pembayaran Honor Ustadz" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-hidden">
-                        </div>
-                    </div>
-
-                    <!-- MODE 1: SINGLE INPUT CEPAT -->
-                    <div v-if="inputMode === 'single'" class="p-4 bg-emerald-50/50 rounded-xl border border-emerald-200/80 space-y-4">
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Jenis Transaksi</label>
-                                <div class="grid grid-cols-2 gap-2">
-                                    <button type="button" @click="singleForm.type = 'in'" 
-                                            :class="singleForm.type === 'in' ? 'bg-emerald-600 text-white font-bold shadow-xs' : 'bg-white text-slate-700 border border-slate-200'"
-                                            class="py-2 text-xs rounded-lg transition-all flex items-center justify-center gap-1">
-                                        <i class="fa-solid fa-arrow-down"></i> Masuk
-                                    </button>
-                                    <button type="button" @click="singleForm.type = 'out'" 
-                                            :class="singleForm.type === 'out' ? 'bg-red-600 text-white font-bold shadow-xs' : 'bg-white text-slate-700 border border-slate-200'"
-                                            class="py-2 text-xs rounded-lg transition-all flex items-center justify-center gap-1">
-                                        <i class="fa-solid fa-arrow-up"></i> Keluar
-                                    </button>
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Pilih Pos Dana</label>
-                                <select v-model="singleForm.pos" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden">
-                                    <option value="kas">💼 Kas Utama (Kas)</option>
-                                    <option value="ikrom">🤲 Dana Ikrom (Bisaroh)</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Nominal (Rp) <span class="text-red-500">*</span></label>
-                            <div class="relative">
-                                <span class="absolute left-3.5 top-2.5 font-bold text-slate-500 text-sm">Rp</span>
-                                <input type="number" step="any" v-model.number="singleForm.amount" required placeholder="0" min="1" 
-                                       class="w-full bg-white border border-slate-300 rounded-lg pl-10 pr-4 py-2 text-base font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden">
-                            </div>
-                            <p class="text-xs text-emerald-700 font-semibold mt-1.5" v-if="singleForm.amount > 0">
-                                Format: {{ formatRupiah(singleForm.amount) }}
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- MODE 2: MULTI-COLUMN INPUT MAJEMUK -->
-                    <div v-else class="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                        <p class="text-xs font-semibold text-slate-600">Isi nominal pada pos yang bersangkutan:</p>
-                        
-                        <!-- Pos Kas -->
-                        <div class="p-3 bg-emerald-50/60 rounded-lg border border-emerald-200/80 grid grid-cols-2 gap-3">
-                            <div class="col-span-2 flex items-center justify-between">
-                                <span class="text-xs font-bold text-emerald-800"><i class="fa-solid fa-wallet mr-1"></i> Pos Kas Utama</span>
-                            </div>
-                            <div>
-                                <label class="block text-[11px] font-medium text-emerald-800 mb-0.5">Kas Masuk (Rp)</label>
-                                <input type="number" step="any" v-model.number="form.kas_in" placeholder="0" class="w-full bg-white border border-emerald-200 rounded-md px-2.5 py-1.5 text-xs font-semibold">
-                            </div>
-                            <div>
-                                <label class="block text-[11px] font-medium text-red-700 mb-0.5">Kas Keluar (Rp)</label>
-                                <input type="number" step="any" v-model.number="form.kas_out" placeholder="0" class="w-full bg-white border border-emerald-200 rounded-md px-2.5 py-1.5 text-xs font-semibold text-red-600">
-                            </div>
-                        </div>
-
-                        <!-- Pos Ikrom -->
-                        <div class="p-3 bg-blue-50/60 rounded-lg border border-blue-200/80 grid grid-cols-2 gap-3">
-                            <div class="col-span-2 flex items-center justify-between">
-                                <span class="text-xs font-bold text-blue-800"><i class="fa-solid fa-hand-holding-heart mr-1"></i> Pos Dana Ikrom</span>
-                            </div>
-                            <div>
-                                <label class="block text-[11px] font-medium text-blue-800 mb-0.5">Ikrom Masuk (Rp)</label>
-                                <input type="number" step="any" v-model.number="form.ikrom_in" placeholder="0" class="w-full bg-white border border-blue-200 rounded-md px-2.5 py-1.5 text-xs font-semibold">
-                            </div>
-                            <div>
-                                <label class="block text-[11px] font-medium text-red-700 mb-0.5">Ikrom Keluar (Rp)</label>
-                                <input type="number" step="any" v-model.number="form.ikrom_out" placeholder="0" class="w-full bg-white border border-blue-200 rounded-md px-2.5 py-1.5 text-xs font-semibold text-red-600">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Modal Actions -->
-                    <div class="pt-3 border-t border-slate-200 flex items-center justify-end space-x-2">
-                        <button type="button" @click="closeModal" class="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors">
-                            Batal
-                        </button>
-                        <button type="submit" class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-600/20 transition-all flex items-center gap-2">
-                            <i class="fa-solid fa-check"></i> Simpan Transaksi
-                        </button>
-                    </div>
-                </form>
+            <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs">
+                <h3 class="font-bold text-slate-900 mb-1">Tren Pertumbuhan Saldo</h3>
+                <p class="text-xs text-slate-500 mb-4">Total saldo kumulatif dari seluruh transaksi</p>
+                <div class="h-72"><canvas id="trendChart"></canvas></div>
             </div>
         </div>
 
-        <!-- MODAL: MANAJEMEN KATEGORI (no-print) -->
-        <div v-if="showCategoryModal" class="no-print fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-            <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden border border-slate-100 animate-in fade-in zoom-in duration-150">
-                <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
-                    <div class="flex items-center space-x-2">
-                        <i class="fa-solid fa-tags text-emerald-400"></i>
-                        <h3 class="font-bold text-base">Kelola Kategori Transaksi</h3>
+    </main>
+
+    <!-- Footer -->
+    <footer class="no-print bg-white border-t border-slate-200 py-4 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
+            <p>&copy; 2026 Aplikasi Buku Kas & Dana Ikrom + Master Siswa. Golang + Vue 3.</p>
+            <div class="flex items-center space-x-4">
+                <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> SQLite WAL Active</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ══════════════ MODAL: INPUT TRANSAKSI ══════════════ -->
+    <div v-if="showModal" class="no-print fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-xl w-full shadow-2xl overflow-hidden border border-slate-100">
+            <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+                <div class="flex items-center space-x-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                        <i :class="isEditing ? 'fa-solid fa-pen-to-square' : 'fa-solid fa-plus-circle'" class="text-lg"></i>
                     </div>
-                    <button @click="showCategoryModal = false" class="text-slate-400 hover:text-white">
-                        <i class="fa-solid fa-xmark text-lg"></i>
-                    </button>
+                    <div>
+                        <h3 class="font-bold text-base">{{ isEditing ? 'Edit Transaksi' : 'Input Transaksi Kas' }}</h3>
+                        <p class="text-xs text-slate-400">Mutasi Kas & Dana Ikrom</p>
+                    </div>
+                </div>
+                <button @click="closeModal" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <form @submit.prevent="saveTransaction" class="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+
+                <!-- Tanggal & Nomor Bukti -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">
+                            <i class="fa-regular fa-calendar text-emerald-600 mr-1"></i> Tanggal <span class="text-red-500">*</span>
+                        </label>
+                        <input type="date" v-model="form.date" required
+                               class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none font-medium">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">
+                            <i class="fa-solid fa-receipt text-emerald-600 mr-1"></i> Nomor Bukti
+                        </label>
+                        <input type="text" v-model="form.ref_no" placeholder="BKM-001"
+                               class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none font-mono">
+                    </div>
                 </div>
 
-                <div class="p-6 space-y-4">
-                    <!-- Form Tambah Kategori -->
-                    <form @submit.prevent="addCategory" class="flex gap-2">
-                        <input type="text" v-model="newCategory.name" required placeholder="Nama kategori baru..." 
-                               class="flex-1 bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:bg-white focus:outline-hidden font-medium">
-                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-all">
-                            <i class="fa-solid fa-plus mr-1"></i> Tambah
+                <!-- Nama Siswa (pilih dari dropdown atau ketik bebas) -->
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="text-xs font-bold text-slate-700">
+                            <i class="fa-solid fa-user-graduate text-emerald-600 mr-1"></i> Nama Siswa / Pihak
+                        </label>
+                        <button type="button" @click="openCreateStudentModal"
+                                class="text-[10px] text-indigo-600 font-bold hover:underline flex items-center gap-1">
+                            <i class="fa-solid fa-plus text-[9px]"></i> Tambah Siswa Baru
                         </button>
-                    </form>
+                    </div>
 
-                    <!-- List Kategori -->
-                    <div class="max-h-64 overflow-y-auto divide-y divide-slate-100 border border-slate-200 rounded-xl">
-                        <div v-for="c in categories" :key="c.id" class="px-4 py-2.5 flex items-center justify-between text-xs hover:bg-slate-50">
-                            <span class="font-semibold text-slate-800">{{ c.name }}</span>
-                            <button @click="deleteCategory(c.id, c.name)" class="text-slate-400 hover:text-red-600 p-1 transition-colors" title="Hapus Kategori">
-                                <i class="fa-regular fa-trash-can"></i>
-                            </button>
+                    <!-- Input dengan datalist siswa -->
+                    <input type="text"
+                           v-model="form.name"
+                           list="student-datalist"
+                           placeholder="Pilih dari daftar atau ketik nama bebas..."
+                           class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none font-medium">
+                    <datalist id="student-datalist">
+                        <option v-for="s in students" :key="s.id" :value="s.name">
+                            {{ s.name }}{{ s.parent ? ' — Wali: ' + s.parent : '' }}
+                        </option>
+                    </datalist>
+
+                    <!-- Quick-pick pills dari daftar siswa -->
+                    <div v-if="students.length > 0" class="mt-2 flex flex-wrap gap-1.5">
+                        <button type="button"
+                                v-for="s in students"
+                                :key="'pill-'+s.id"
+                                @click="onSelectStudentName(s.name)"
+                                :class="form.name === s.name
+                                    ? 'bg-emerald-600 text-white ring-2 ring-emerald-400 ring-offset-1'
+                                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+                                class="text-[11px] font-semibold px-2.5 py-1 rounded-full transition-all">
+                            {{ s.name }}
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Keterangan -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">
+                        <i class="fa-solid fa-pen-nib text-emerald-600 mr-1"></i> Keterangan / Uraian <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" v-model="form.description" required
+                           placeholder="Contoh: Iuran Bulanan Siswa / Bisaroh Guru"
+                           class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none font-medium">
+                </div>
+
+                <!-- Jenis: Masukan / Keluaran -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                        <i class="fa-solid fa-arrows-up-down text-emerald-600 mr-1"></i> Jenis Transaksi
+                    </label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button type="button" @click="form.type='in'"
+                                :class="form.type==='in' ? 'bg-emerald-600 text-white ring-2 ring-emerald-500 ring-offset-1' : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50'"
+                                class="py-2.5 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-circle-arrow-down"></i> Masukan (Penerimaan)
+                        </button>
+                        <button type="button" @click="form.type='out'"
+                                :class="form.type==='out' ? 'bg-red-600 text-white ring-2 ring-red-500 ring-offset-1' : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50'"
+                                class="py-2.5 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-circle-arrow-up"></i> Keluaran (Pengeluaran)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Nominal Kas & Ikrom -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="p-3.5 bg-emerald-50/70 rounded-xl border-2 border-emerald-200/80 space-y-1.5">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
+                                <i class="fa-solid fa-wallet text-emerald-600"></i> Kas (Rp)
+                            </label>
+                            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-md"
+                                  :class="form.type==='in' ? 'bg-emerald-200 text-emerald-800' : 'bg-red-200 text-red-800'">
+                                {{ form.type==='in' ? 'Kas Masuk' : 'Kas Keluar' }}
+                            </span>
+                        </div>
+                        <div class="relative">
+                            <span class="absolute left-3 top-2 text-xs font-bold text-emerald-700">Rp</span>
+                            <input type="text" :value="form.kas_formatted" @input="onKasInput($event)" placeholder="0"
+                                   class="w-full bg-white border border-emerald-300 rounded-lg pl-9 pr-3 py-2 text-sm font-bold text-emerald-950 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        </div>
+                    </div>
+                    <div class="p-3.5 bg-blue-50/70 rounded-xl border-2 border-blue-200/80 space-y-1.5">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-bold text-blue-900 flex items-center gap-1.5">
+                                <i class="fa-solid fa-hand-holding-heart text-blue-600"></i> Ikrom (Rp)
+                            </label>
+                            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-md"
+                                  :class="form.type==='in' ? 'bg-blue-200 text-blue-800' : 'bg-red-200 text-red-800'">
+                                {{ form.type==='in' ? 'Ikrom Masuk' : 'Ikrom Keluar' }}
+                            </span>
+                        </div>
+                        <div class="relative">
+                            <span class="absolute left-3 top-2 text-xs font-bold text-blue-700">Rp</span>
+                            <input type="text" :value="form.ikrom_formatted" @input="onIkromInput($event)" placeholder="0"
+                                   class="w-full bg-white border border-blue-300 rounded-lg pl-9 pr-3 py-2 text-sm font-bold text-blue-950 focus:ring-2 focus:ring-blue-500 focus:outline-none">
                         </div>
                     </div>
                 </div>
 
-                <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 text-right">
-                    <button @click="showCategoryModal = false" class="px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-700 bg-slate-200 hover:bg-slate-300">
-                        Tutup
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- MODAL: PRINT PREVIEW & PDF SETTINGS (no-print) -->
-        <div v-if="showPrintModal" class="no-print fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-            <div class="bg-white rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden border border-slate-100 animate-in fade-in zoom-in duration-150">
-                <div class="px-6 py-4 bg-blue-900 text-white flex items-center justify-between">
-                    <div class="flex items-center space-x-2">
-                        <i class="fa-solid fa-print text-blue-300"></i>
-                        <h3 class="font-bold text-base">Cetak Laporan Buku Kas & Dana Ikrom (PDF / Print)</h3>
-                    </div>
-                    <button @click="showPrintModal = false" class="text-blue-300 hover:text-white">
-                        <i class="fa-solid fa-xmark text-lg"></i>
-                    </button>
-                </div>
-
-                <div class="p-6 space-y-4 max-h-[70vh] overflow-y-auto text-xs">
-                    <p class="text-slate-500 font-medium">Sesuaikan identitas laporan sebelum mencetak:</p>
-                    
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block font-bold text-slate-700 mb-1">Nama Organisasi / Yayasan</label>
-                            <input type="text" v-model="reportSettings.orgName" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs font-bold">
+                <!-- Total -->
+                <div class="p-4 bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-200 rounded-xl flex items-center justify-between">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center">
+                            <i class="fa-solid fa-calculator text-sm"></i>
                         </div>
                         <div>
-                            <label class="block font-bold text-slate-700 mb-1">Alamat / Kontak</label>
-                            <input type="text" v-model="reportSettings.address" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs">
-                        </div>
-                        <div>
-                            <label class="block font-bold text-slate-700 mb-1">Judul Laporan</label>
-                            <input type="text" v-model="reportSettings.title" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs font-bold">
-                        </div>
-                        <div>
-                            <label class="block font-bold text-slate-700 mb-1">Tempat & Tanggal Cetak</label>
-                            <div class="flex gap-2">
-                                <input type="text" v-model="reportSettings.signerPlace" placeholder="Kota" class="w-1/3 bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs">
-                                <input type="text" v-model="reportSettings.signerDate" class="w-2/3 bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs">
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block font-bold text-slate-700 mb-1">Penandatangan 1 (Ketua)</label>
-                            <input type="text" v-model="reportSettings.signer1Role" placeholder="Jabatan" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs mb-1">
-                            <input type="text" v-model="reportSettings.signer1Name" placeholder="Nama Lengkap" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs">
-                        </div>
-                        <div>
-                            <label class="block font-bold text-slate-700 mb-1">Penandatangan 2 (Bendahara)</label>
-                            <input type="text" v-model="reportSettings.signer2Role" placeholder="Jabatan" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs mb-1">
-                            <input type="text" v-model="reportSettings.signer2Name" placeholder="Nama Lengkap" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs">
+                            <span class="text-xs font-extrabold uppercase tracking-wider text-purple-900 block">Total Transaksi</span>
+                            <span class="text-[11px] text-purple-700">Kas {{ formatRupiah(form.kas_amount) }} + Ikrom {{ formatRupiah(form.ikrom_amount) }}</span>
                         </div>
                     </div>
+                    <span class="text-lg font-black text-purple-950">{{ formatRupiah(formTotal) }}</span>
                 </div>
 
-                <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end space-x-2">
-                    <button @click="showPrintModal = false" class="px-4 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-200">
-                        Batal
+                <!-- Actions -->
+                <div class="pt-3 border-t border-slate-200 flex items-center justify-end space-x-2">
+                    <button type="button" @click="closeModal" class="px-4 py-2.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100">Batal</button>
+                    <button type="submit" class="px-6 py-2.5 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-md flex items-center gap-2">
+                        <i class="fa-solid fa-check"></i> Simpan Transaksi
                     </button>
-                    <button @click="triggerPrint" class="px-5 py-2 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-md transition-all flex items-center gap-2">
-                        <i class="fa-solid fa-print"></i> Cetak / Simpan PDF
-                    </button>
                 </div>
-            </div>
+            </form>
         </div>
-
-        <!-- 4. OFFICIAL PRINT SECTION (Triggered on window.print()) -->
-        <div id="print-section" class="print-only">
-            <!-- Kop Surat / Header Laporan -->
-            <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 12px;">
-                <h2 style="font-size: 16pt; font-weight: bold; margin: 0; text-transform: uppercase;">{{ reportSettings.orgName }}</h2>
-                <p style="font-size: 10pt; margin: 2px 0 0 0;">{{ reportSettings.address }}</p>
-                <h3 style="font-size: 12pt; font-weight: bold; margin: 8px 0 2px 0; text-decoration: underline;">{{ reportSettings.title }}</h3>
-                <p style="font-size: 9pt; margin: 0;">
-                    Periode: {{ filters.startDate ? formatDate(filters.startDate) : 'Awal' }} s/d {{ filters.endDate ? formatDate(filters.endDate) : 'Sekarang' }}
-                </p>
-            </div>
-
-            <!-- Ringkasan Saldo Laporan -->
-            <div style="margin-bottom: 12px;">
-                <table class="print-table" style="width: 100%; font-size: 9pt;">
-                    <thead>
-                        <tr style="background-color: #f1f5f9;">
-                            <th style="text-align: left;">POS KEUANGAN</th>
-                            <th style="text-align: right;">TOTAL MASUK</th>
-                            <th style="text-align: right;">TOTAL KELUAR</th>
-                            <th style="text-align: right;">SALDO AKHIR</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><b>1. Pos Kas Utama</b></td>
-                            <td style="text-align: right;">{{ formatRupiah(summary.total_kas_in) }}</td>
-                            <td style="text-align: right;">{{ formatRupiah(summary.total_kas_out) }}</td>
-                            <td style="text-align: right; font-weight: bold;">{{ formatRupiah(summary.saldo_kas) }}</td>
-                        </tr>
-                        <tr>
-                            <td><b>2. Pos Dana Ikrom (Bisaroh)</b></td>
-                            <td style="text-align: right;">{{ formatRupiah(summary.total_ikrom_in) }}</td>
-                            <td style="text-align: right;">{{ formatRupiah(summary.total_ikrom_out) }}</td>
-                            <td style="text-align: right; font-weight: bold;">{{ formatRupiah(summary.saldo_ikrom) }}</td>
-                        </tr>
-                        <tr style="background-color: #f8fafc; font-weight: bold;">
-                            <td>GRAND TOTAL KESELURUHAN (KAS + IKROM)</td>
-                            <td style="text-align: right;">{{ formatRupiah(summary.total_masuk) }}</td>
-                            <td style="text-align: right;">{{ formatRupiah(summary.total_keluar) }}</td>
-                            <td style="text-align: right;">{{ formatRupiah(summary.total_saldo) }}</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Detail Mutasi Transaksi -->
-            <table class="print-table" style="width: 100%; font-size: 8.5pt;">
-                <thead>
-                    <tr style="background-color: #f1f5f9;">
-                        <th rowspan="2">No</th>
-                        <th rowspan="2">Tanggal</th>
-                        <th rowspan="2">No. Bukti</th>
-                        <th rowspan="2" style="text-align: left;">Keterangan</th>
-                        <th rowspan="2">Kategori</th>
-                        <th colspan="3">POS KAS UTAMA</th>
-                        <th colspan="3">POS DANA IKROM</th>
-                        <th rowspan="2">TOTAL SALDO</th>
-                    </tr>
-                    <tr style="background-color: #f8fafc; font-size: 8pt;">
-                        <th>Masuk</th><th>Keluar</th><th>Saldo</th>
-                        <th>Masuk</th><th>Keluar</th><th>Saldo</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="(t, idx) in transactions" :key="'print-'+t.id">
-                        <td style="text-align: center;">{{ idx + 1 }}</td>
-                        <td style="text-align: center;">{{ formatDate(t.date) }}</td>
-                        <td style="text-align: center;">{{ t.ref_no || '-' }}</td>
-                        <td>{{ t.description }}</td>
-                        <td style="text-align: center;">{{ t.category }}</td>
-                        <td style="text-align: right;">{{ t.kas_in > 0 ? formatRupiah(t.kas_in) : '-' }}</td>
-                        <td style="text-align: right;">{{ t.kas_out > 0 ? formatRupiah(t.kas_out) : '-' }}</td>
-                        <td style="text-align: right; font-weight: bold;">{{ formatRupiah(t.kas_balance) }}</td>
-                        <td style="text-align: right;">{{ t.ikrom_in > 0 ? formatRupiah(t.ikrom_in) : '-' }}</td>
-                        <td style="text-align: right;">{{ t.ikrom_out > 0 ? formatRupiah(t.ikrom_out) : '-' }}</td>
-                        <td style="text-align: right; font-weight: bold;">{{ formatRupiah(t.ikrom_balance) }}</td>
-                        <td style="text-align: right; font-weight: bold;">{{ formatRupiah(t.total_balance) }}</td>
-                    </tr>
-                </tbody>
-                <tfoot>
-                    <tr style="font-weight: bold; background-color: #f1f5f9;">
-                        <td colspan="5" style="text-align: right;">TOTAL:</td>
-                        <td style="text-align: right;">{{ formatRupiah(tableTotals.kasIn) }}</td>
-                        <td style="text-align: right;">{{ formatRupiah(tableTotals.kasOut) }}</td>
-                        <td style="text-align: right;">{{ formatRupiah(tableTotals.finalKasBalance) }}</td>
-                        <td style="text-align: right;">{{ formatRupiah(tableTotals.ikromIn) }}</td>
-                        <td style="text-align: right;">{{ formatRupiah(tableTotals.ikromOut) }}</td>
-                        <td style="text-align: right;">{{ formatRupiah(tableTotals.finalIkromBalance) }}</td>
-                        <td style="text-align: right;">{{ formatRupiah(tableTotals.finalTotalBalance) }}</td>
-                    </tr>
-                </tfoot>
-            </table>
-
-            <!-- Tanda Tangan Laporan -->
-            <div style="margin-top: 30px; display: flex; justify-content: space-between; page-break-inside: avoid;">
-                <div style="text-align: center; width: 220px;">
-                    <p style="margin-bottom: 60px;">Mengetahui,<br><b>{{ reportSettings.signer1Role }}</b></p>
-                    <p><b>{{ reportSettings.signer1Name }}</b></p>
-                </div>
-                <div style="text-align: center; width: 220px;">
-                    <p style="margin-bottom: 60px;">{{ reportSettings.signerPlace }}, {{ reportSettings.signerDate }}<br><b>{{ reportSettings.signer2Role }}</b></p>
-                    <p><b>{{ reportSettings.signer2Name }}</b></p>
-                </div>
-            </div>
-        </div>
-
     </div>
 
-    <!-- App JavaScript -->
-    <script src="/app.js"></script>
+    <!-- ══════════════ MODAL: MASTER DATA SISWA (hanya Nama & Orang Tua) ══════════════ -->
+    <div v-if="showStudentModal" class="no-print fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden border border-slate-100">
+            <div class="px-6 py-4 bg-indigo-900 text-white flex items-center justify-between">
+                <div class="flex items-center space-x-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-500/30 text-indigo-300 flex items-center justify-center">
+                        <i class="fa-solid fa-graduation-cap"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-base">{{ isEditingStudent ? 'Edit Data Siswa' : 'Tambah Siswa Baru' }}</h3>
+                        <p class="text-xs text-indigo-300">Master direktori siswa</p>
+                    </div>
+                </div>
+                <button @click="closeStudentModal" class="text-indigo-300 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <form @submit.prevent="saveStudent" class="p-6 space-y-4">
+
+                <!-- Nama Siswa -->
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1.5">
+                        <i class="fa-solid fa-user-graduate text-indigo-500 mr-1"></i>
+                        Nama Lengkap Siswa <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" v-model="studentForm.name" required
+                           placeholder="Contoh: Muhammad Rizky Pratama"
+                           class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none focus:bg-white transition-all">
+                </div>
+
+                <!-- Nama Orang Tua -->
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1.5">
+                        <i class="fa-solid fa-users text-indigo-500 mr-1"></i>
+                        Nama Orang Tua / Wali
+                    </label>
+                    <input type="text" v-model="studentForm.parent"
+                           placeholder="Contoh: Bpk. Hendra Saputra"
+                           class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none focus:bg-white transition-all">
+                </div>
+
+                <!-- Actions -->
+                <div class="pt-3 border-t border-slate-200 flex items-center justify-end space-x-2">
+                    <button type="button" @click="closeStudentModal" class="px-4 py-2.5 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100">Batal</button>
+                    <button type="submit" class="px-6 py-2.5 rounded-lg text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md flex items-center gap-2">
+                        <i class="fa-solid fa-check"></i> Simpan Siswa
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ══════════════ MODAL: CETAK / PDF ══════════════ -->
+    <div v-if="showPrintModal" class="no-print fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden border border-slate-100">
+            <div class="px-6 py-4 bg-blue-900 text-white flex items-center justify-between">
+                <div class="flex items-center space-x-2"><i class="fa-solid fa-print text-blue-300"></i><h3 class="font-bold">Cetak Laporan Buku Kas</h3></div>
+                <button @click="showPrintModal=false" class="text-blue-300 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="p-6 space-y-3 max-h-[70vh] overflow-y-auto text-xs">
+                <div class="grid grid-cols-2 gap-3">
+                    <div><label class="block font-bold text-slate-700 mb-1">Nama Organisasi / Yayasan</label><input type="text" v-model="reportSettings.orgName" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 font-bold"></div>
+                    <div><label class="block font-bold text-slate-700 mb-1">Alamat</label><input type="text" v-model="reportSettings.address" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2"></div>
+                    <div><label class="block font-bold text-slate-700 mb-1">Judul Laporan</label><input type="text" v-model="reportSettings.title" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 font-bold"></div>
+                    <div><label class="block font-bold text-slate-700 mb-1">Tempat, Tanggal</label>
+                        <div class="flex gap-2">
+                            <input type="text" v-model="reportSettings.signerPlace" placeholder="Kota" class="w-1/3 bg-slate-50 border border-slate-300 rounded-lg p-2">
+                            <input type="text" v-model="reportSettings.signerDate" class="w-2/3 bg-slate-50 border border-slate-300 rounded-lg p-2">
+                        </div>
+                    </div>
+                    <div><label class="block font-bold text-slate-700 mb-1">Penandatangan 1</label>
+                        <input type="text" v-model="reportSettings.signer1Role" placeholder="Jabatan" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 mb-1">
+                        <input type="text" v-model="reportSettings.signer1Name" placeholder="Nama" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2">
+                    </div>
+                    <div><label class="block font-bold text-slate-700 mb-1">Penandatangan 2</label>
+                        <input type="text" v-model="reportSettings.signer2Role" placeholder="Jabatan" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 mb-1">
+                        <input type="text" v-model="reportSettings.signer2Name" placeholder="Nama" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2">
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end space-x-2">
+                <button @click="showPrintModal=false" class="px-4 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-200">Batal</button>
+                <button @click="triggerPrint" class="px-5 py-2 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-md flex items-center gap-2">
+                    <i class="fa-solid fa-print"></i> Cetak / Simpan PDF
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════ PRINT SECTION ══════════════ -->
+    <div id="print-section" class="print-only">
+        <div style="text-align:center; border-bottom:2px solid #000; padding-bottom:8px; margin-bottom:12px;">
+            <h2 style="font-size:16pt; font-weight:bold; margin:0; text-transform:uppercase;">{{ reportSettings.orgName }}</h2>
+            <p style="font-size:10pt; margin:2px 0 0 0;">{{ reportSettings.address }}</p>
+            <h3 style="font-size:12pt; font-weight:bold; margin:8px 0 2px 0; text-decoration:underline;">{{ reportSettings.title }}</h3>
+            <p style="font-size:9pt; margin:0;">Periode: {{ filters.startDate ? formatDate(filters.startDate) : 'Awal' }} s/d {{ filters.endDate ? formatDate(filters.endDate) : 'Sekarang' }}</p>
+        </div>
+        <!-- Summary -->
+        <table class="print-table" style="width:100%; font-size:9pt; margin-bottom:12px;">
+            <thead>
+                <tr style="background:#f1f5f9;">
+                    <th style="text-align:left;">POS KEUANGAN</th>
+                    <th style="text-align:right;">TOTAL MASUK</th>
+                    <th style="text-align:right;">TOTAL KELUAR</th>
+                    <th style="text-align:right;">SALDO AKHIR</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td><b>1. Pos Kas Utama</b></td><td style="text-align:right;">{{ formatRupiah(summary.total_kas_in) }}</td><td style="text-align:right;">{{ formatRupiah(summary.total_kas_out) }}</td><td style="text-align:right;font-weight:bold;">{{ formatRupiah(summary.saldo_kas) }}</td></tr>
+                <tr><td><b>2. Pos Dana Ikrom</b></td><td style="text-align:right;">{{ formatRupiah(summary.total_ikrom_in) }}</td><td style="text-align:right;">{{ formatRupiah(summary.total_ikrom_out) }}</td><td style="text-align:right;font-weight:bold;">{{ formatRupiah(summary.saldo_ikrom) }}</td></tr>
+                <tr style="background:#f8fafc;font-weight:bold;"><td>GRAND TOTAL</td><td style="text-align:right;">{{ formatRupiah(summary.total_masuk) }}</td><td style="text-align:right;">{{ formatRupiah(summary.total_keluar) }}</td><td style="text-align:right;">{{ formatRupiah(summary.total_saldo) }}</td></tr>
+            </tbody>
+        </table>
+        <!-- Detail transactions -->
+        <table class="print-table" style="width:100%; font-size:8.5pt;">
+            <thead>
+                <tr style="background:#f1f5f9;">
+                    <th rowspan="2">No</th><th rowspan="2">Tanggal</th><th rowspan="2">No. Bukti</th>
+                    <th rowspan="2" style="text-align:left;">Nama</th><th rowspan="2" style="text-align:left;">Keterangan</th>
+                    <th colspan="3">POS KAS UTAMA</th>
+                    <th colspan="3">POS DANA IKROM</th>
+                    <th rowspan="2">TOTAL SALDO</th>
+                </tr>
+                <tr style="background:#f8fafc;font-size:8pt;"><th>Masuk</th><th>Keluar</th><th>Saldo</th><th>Masuk</th><th>Keluar</th><th>Saldo</th></tr>
+            </thead>
+            <tbody>
+                <tr v-for="(t,idx) in transactions" :key="'p'+t.id">
+                    <td style="text-align:center;">{{ idx+1 }}</td>
+                    <td style="text-align:center;">{{ formatDate(t.date) }}</td>
+                    <td style="text-align:center;">{{ t.ref_no||'-' }}</td>
+                    <td style="font-weight:600;">{{ t.name||'-' }}</td>
+                    <td>{{ t.description }}</td>
+                    <td style="text-align:right;">{{ t.kas_in>0 ? formatRupiah(t.kas_in) : '-' }}</td>
+                    <td style="text-align:right;">{{ t.kas_out>0 ? formatRupiah(t.kas_out) : '-' }}</td>
+                    <td style="text-align:right;font-weight:bold;">{{ formatRupiah(t.kas_balance) }}</td>
+                    <td style="text-align:right;">{{ t.ikrom_in>0 ? formatRupiah(t.ikrom_in) : '-' }}</td>
+                    <td style="text-align:right;">{{ t.ikrom_out>0 ? formatRupiah(t.ikrom_out) : '-' }}</td>
+                    <td style="text-align:right;font-weight:bold;">{{ formatRupiah(t.ikrom_balance) }}</td>
+                    <td style="text-align:right;font-weight:bold;">{{ formatRupiah(t.total_balance) }}</td>
+                </tr>
+            </tbody>
+            <tfoot>
+                <tr style="font-weight:bold;background:#f1f5f9;">
+                    <td colspan="5" style="text-align:right;">TOTAL:</td>
+                    <td style="text-align:right;">{{ formatRupiah(tableTotals.kasIn) }}</td>
+                    <td style="text-align:right;">{{ formatRupiah(tableTotals.kasOut) }}</td>
+                    <td style="text-align:right;">{{ formatRupiah(tableTotals.finalKasBalance) }}</td>
+                    <td style="text-align:right;">{{ formatRupiah(tableTotals.ikromIn) }}</td>
+                    <td style="text-align:right;">{{ formatRupiah(tableTotals.ikromOut) }}</td>
+                    <td style="text-align:right;">{{ formatRupiah(tableTotals.finalIkromBalance) }}</td>
+                    <td style="text-align:right;">{{ formatRupiah(tableTotals.finalTotalBalance) }}</td>
+                </tr>
+            </tfoot>
+        </table>
+        <div style="margin-top:30px; display:flex; justify-content:space-between;">
+            <div style="text-align:center; width:220px;">
+                <p style="margin-bottom:60px;">Mengetahui,<br><b>{{ reportSettings.signer1Role }}</b></p>
+                <p><b>{{ reportSettings.signer1Name }}</b></p>
+            </div>
+            <div style="text-align:center; width:220px;">
+                <p style="margin-bottom:60px;">{{ reportSettings.signerPlace }}, {{ reportSettings.signerDate }}<br><b>{{ reportSettings.signer2Role }}</b></p>
+                <p><b>{{ reportSettings.signer2Name }}</b></p>
+            </div>
+        </div>
+    </div>
+
+</div>
+<script src="/app.js"></script>
 </body>
 </html>
