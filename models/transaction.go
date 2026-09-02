@@ -2,9 +2,24 @@ package models
 
 import "time"
 
+// KasBook represents a main cash book
+type KasBook struct {
+	ID        int64     `json:"id"`
+	Name      string    `json:"name"`
+	ModelType int       `json:"model_type"` // 1: With Ikrom & Halaqoh, 2: Standard
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type KasBookInput struct {
+	Name      string `json:"name"`
+	ModelType int    `json:"model_type"`
+}
+
 // Transaction represents a cash book entry for Kas & Ikrom with Nama and Keterangan
 type Transaction struct {
 	ID           int64     `json:"id"`
+	KasID        int64     `json:"kas_id"`
 	Date         string    `json:"date"`          // Format: YYYY-MM-DD
 	RefNo        string    `json:"ref_no"`        // Nomor Bukti/Kwitansi (e.g. BKM-001)
 	Name         string    `json:"name"`          // Nama Siswa / Donatur / Penerima
@@ -22,6 +37,7 @@ type Transaction struct {
 
 // TransactionInput is the payload received when creating or updating a transaction
 type TransactionInput struct {
+	KasID       int64   `json:"kas_id"`
 	Date        string  `json:"date"`
 	RefNo       string  `json:"ref_no"`
 	Name        string  `json:"name"`
@@ -32,19 +48,21 @@ type TransactionInput struct {
 	IkromOut    float64 `json:"ikrom_out"`
 }
 
-// Student represents Master Data Siswa - hanya Nama dan Nama Orang Tua
+// Student represents Master Data Siswa - hanya Nama dan Halaqoh
 type Student struct {
 	ID        int64     `json:"id"`
+	KasID     int64     `json:"kas_id"`
 	Name      string    `json:"name"`       // Nama Lengkap Siswa
-	Parent    string    `json:"parent"`     // Nama Orang Tua / Wali
+	Halaqoh   string    `json:"halaqoh"`    // Halaqoh
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // StudentInput is the payload received when creating or updating a student
 type StudentInput struct {
-	Name   string `json:"name"`
-	Parent string `json:"parent"`
+	KasID   int64  `json:"kas_id"`
+	Name    string `json:"name"`
+	Halaqoh string `json:"halaqoh"`
 }
 
 // Summary provides aggregate metrics for the dashboard

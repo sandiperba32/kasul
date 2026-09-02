@@ -21,17 +21,123 @@ func writeError(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, map[string]string{"error": message})
 }
 
+func getKasIDFromQuery(r *http.Request) int64 {
+	kasIDStr := r.URL.Query().Get("kas_id")
+	if kasIDStr == "" {
+		return 1
+	}
+	kasID, _ := strconv.ParseInt(kasIDStr, 10, 64)
+	if kasID == 0 {
+		return 1
+	}
+	return kasID
+}
+
+// -------------------------------- KAS BOOKS HANDLERS --------------------------------
+
+func GetKasBooks(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+	books, err := db.GetAllKasBooks()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Gagal mengambil data buku kas: "+err.Error())
+		return
+	}
+	if books == nil {
+		books = []models.KasBook{}
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true, "data": books, "total": len(books)})
+}
+
+func CreateKasBook(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+	var input models.KasBookInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "Format JSON tidak valid: "+err.Error())
+		return
+	}
+	if strings.TrimSpace(input.Name) == "" {
+		writeError(w, http.StatusBadRequest, "Nama buku kas wajib diisi")
+		return
+	}
+	if input.ModelType == 0 {
+		input.ModelType = 1
+	}
+	id, err := db.CreateKasBook(input)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Gagal menyimpan buku kas: "+err.Error())
+		return
+	}
+	created, _ := db.GetKasBookByID(id)
+	writeJSON(w, http.StatusCreated, map[string]interface{}{"success": true, "message": "Buku kas berhasil ditambahkan", "data": created})
+}
+
+func UpdateKasBook(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+	idStr := strings.TrimPrefix(r.URL.Path, "/api/kas_books/")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "ID tidak valid")
+		return
+	}
+	var input models.KasBookInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "Format JSON tidak valid: "+err.Error())
+		return
+	}
+	if strings.TrimSpace(input.Name) == "" {
+		writeError(w, http.StatusBadRequest, "Nama buku kas wajib diisi")
+		return
+	}
+	if err := db.UpdateKasBook(id, input); err != nil {
+		writeError(w, http.StatusInternalServerError, "Gagal memperbarui buku kas: "+err.Error())
+		return
+	}
+	updated, _ := db.GetKasBookByID(id)
+	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true, "message": "Buku kas berhasil diperbarui", "data": updated})
+}
+
+func DeleteKasBook(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+	idStr := strings.TrimPrefix(r.URL.Path, "/api/kas_books/")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "ID tidak valid")
+		return
+	}
+	if id == 1 {
+		writeError(w, http.StatusBadRequest, "Buku kas default tidak bisa dihapus")
+		return
+	}
+	if err := db.DeleteKasBook(id); err != nil {
+		writeError(w, http.StatusInternalServerError, "Gagal menghapus buku kas: "+err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true, "message": "Buku kas berhasil dihapus"})
+}
+
 // -------------------------------- STUDENT HANDLERS --------------------------------
 
-// GetStudents handles GET /api/students
 func GetStudents(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
+	kasID := getKasIDFromQuery(r)
 	search := r.URL.Query().Get("search")
 
-	students, err := db.GetAllStudents(search)
+	students, err := db.GetAllStudents(kasID, search)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "Gagal mengambil data siswa: "+err.Error())
 		return
@@ -42,7 +148,6 @@ func GetStudents(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true, "data": students, "total": len(students)})
 }
 
-// CreateStudent handles POST /api/students
 func CreateStudent(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
@@ -52,6 +157,9 @@ func CreateStudent(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeError(w, http.StatusBadRequest, "Format JSON tidak valid: "+err.Error())
 		return
+	}
+	if input.KasID == 0 {
+		input.KasID = 1
 	}
 	if strings.TrimSpace(input.Name) == "" {
 		writeError(w, http.StatusBadRequest, "Nama siswa wajib diisi")
@@ -66,7 +174,6 @@ func CreateStudent(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, map[string]interface{}{"success": true, "message": "Data siswa berhasil ditambahkan", "data": created})
 }
 
-// UpdateStudent handles PUT /api/students/{id}
 func UpdateStudent(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
 		writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
@@ -83,6 +190,9 @@ func UpdateStudent(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "Format JSON tidak valid: "+err.Error())
 		return
 	}
+	if input.KasID == 0 {
+		input.KasID = 1
+	}
 	if strings.TrimSpace(input.Name) == "" {
 		writeError(w, http.StatusBadRequest, "Nama siswa wajib diisi")
 		return
@@ -95,7 +205,6 @@ func UpdateStudent(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true, "message": "Data siswa berhasil diperbarui", "data": updated})
 }
 
-// DeleteStudent handles DELETE /api/students/{id}
 func DeleteStudent(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
 		writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
@@ -116,14 +225,14 @@ func DeleteStudent(w http.ResponseWriter, r *http.Request) {
 
 // -------------------------------- TRANSACTION HANDLERS --------------------------------
 
-// GetTransactions handles GET /api/transactions
 func GetTransactions(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 	q := r.URL.Query()
-	txns, err := db.GetAllTransactions(q.Get("start_date"), q.Get("end_date"), q.Get("search"), q.Get("pos"))
+	kasID := getKasIDFromQuery(r)
+	txns, err := db.GetAllTransactions(kasID, q.Get("start_date"), q.Get("end_date"), q.Get("search"), q.Get("pos"))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "Gagal mengambil transaksi: "+err.Error())
 		return
@@ -134,7 +243,6 @@ func GetTransactions(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true, "data": txns, "total": len(txns)})
 }
 
-// CreateTransaction handles POST /api/transactions
 func CreateTransaction(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
@@ -144,6 +252,9 @@ func CreateTransaction(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeError(w, http.StatusBadRequest, "Format JSON tidak valid: "+err.Error())
 		return
+	}
+	if input.KasID == 0 {
+		input.KasID = 1
 	}
 	if strings.TrimSpace(input.Description) == "" {
 		writeError(w, http.StatusBadRequest, "Keterangan transaksi wajib diisi")
@@ -158,7 +269,6 @@ func CreateTransaction(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, map[string]interface{}{"success": true, "message": "Transaksi berhasil disimpan", "data": created})
 }
 
-// UpdateTransaction handles PUT /api/transactions/{id}
 func UpdateTransaction(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
 		writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
@@ -175,6 +285,9 @@ func UpdateTransaction(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "Format JSON tidak valid: "+err.Error())
 		return
 	}
+	if input.KasID == 0 {
+		input.KasID = 1
+	}
 	if strings.TrimSpace(input.Description) == "" {
 		writeError(w, http.StatusBadRequest, "Keterangan transaksi wajib diisi")
 		return
@@ -187,7 +300,6 @@ func UpdateTransaction(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true, "message": "Transaksi berhasil diperbarui", "data": updated})
 }
 
-// DeleteTransaction handles DELETE /api/transactions/{id}
 func DeleteTransaction(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
 		writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
@@ -206,14 +318,14 @@ func DeleteTransaction(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true, "message": "Transaksi berhasil dihapus"})
 }
 
-// GetSummary handles GET /api/summary
 func GetSummary(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 	q := r.URL.Query()
-	summary, err := db.GetSummary(q.Get("start_date"), q.Get("end_date"))
+	kasID := getKasIDFromQuery(r)
+	summary, err := db.GetSummary(kasID, q.Get("start_date"), q.Get("end_date"))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "Gagal menghitung ringkasan: "+err.Error())
 		return
@@ -221,13 +333,13 @@ func GetSummary(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true, "data": summary})
 }
 
-// GetChartData handles GET /api/chart-data
 func GetChartData(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
-	chartData, err := db.GetChartData()
+	kasID := getKasIDFromQuery(r)
+	chartData, err := db.GetChartData(kasID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "Gagal mengambil data grafik: "+err.Error())
 		return
@@ -235,20 +347,20 @@ func GetChartData(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true, "data": chartData})
 }
 
-// ExportCSV handles GET /api/export/csv
 func ExportCSV(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 	q := r.URL.Query()
-	txns, err := db.GetAllTransactions(q.Get("start_date"), q.Get("end_date"), q.Get("search"), q.Get("pos"))
+	kasID := getKasIDFromQuery(r)
+	txns, err := db.GetAllTransactions(kasID, q.Get("start_date"), q.Get("end_date"), q.Get("search"), q.Get("pos"))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "Gagal export: "+err.Error())
 		return
 	}
 
-	filename := "buku_kas_ikrom.csv"
+	filename := "buku_kas.csv"
 	if q.Get("start_date") != "" && q.Get("end_date") != "" {
 		filename = fmt.Sprintf("buku_kas_%s_sd_%s.csv", q.Get("start_date"), q.Get("end_date"))
 	}
@@ -284,26 +396,39 @@ func ExportCSV(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// SeedData handles POST /api/seed
 func SeedData(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
-	if err := db.SeedSampleData(); err != nil {
+	var input struct {
+		KasID int64 `json:"kas_id"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&input)
+	if input.KasID == 0 {
+		input.KasID = 1
+	}
+
+	if err := db.SeedSampleData(input.KasID); err != nil {
 		writeError(w, http.StatusInternalServerError, "Gagal seed data: "+err.Error())
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true, "message": "Data contoh berhasil dimuat"})
 }
 
-// ResetData handles POST /api/reset
 func ResetData(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
-	if err := db.ResetAllData(); err != nil {
+	var input struct {
+		KasID int64 `json:"kas_id"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&input)
+	if input.KasID == 0 {
+		input.KasID = 1
+	}
+	if err := db.ResetAllData(input.KasID); err != nil {
 		writeError(w, http.StatusInternalServerError, "Gagal reset data: "+err.Error())
 		return
 	}

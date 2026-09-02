@@ -52,10 +52,10 @@ func main() {
 	log.Println("Database SQLite berhasil dihubungkan.")
 
 	// Auto-seed sample data on first run if database is empty
-	summary, err := db.GetSummary("", "")
+	summary, err := db.GetSummary(1, "", "")
 	if err == nil && summary.TransactionCount == 0 {
 		log.Println("Database kosong, mengisi data demo awal...")
-		_ = db.SeedSampleData()
+		_ = db.SeedSampleData(1)
 	}
 
 	mux := http.NewServeMux()
@@ -106,6 +106,29 @@ func main() {
 		}
 	})
 
+
+	// KasBooks API Routes
+	mux.HandleFunc("/api/kas_books", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			handlers.GetKasBooks(w, r)
+		case http.MethodPost:
+			handlers.CreateKasBook(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	mux.HandleFunc("/api/kas_books/", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPut:
+			handlers.UpdateKasBook(w, r)
+		case http.MethodDelete:
+			handlers.DeleteKasBook(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
 
 	mux.HandleFunc("/api/summary", handlers.GetSummary)
 	mux.HandleFunc("/api/chart-data", handlers.GetChartData)

@@ -3,6 +3,9 @@ const { createApp, ref, reactive, computed, onMounted, watch, nextTick } = Vue;
 createApp({
     setup() {
         // ─────────── State ───────────
+        const kasBooks = ref([]);
+        const selectedKas = ref(null);
+
         const transactions = ref([]);
         const students = ref([]);
         const summary = ref({
@@ -26,11 +29,17 @@ createApp({
         const isEditingStudent = ref(false);
         const editingStudentId = ref(null);
 
+        const showKasModal = ref(false);
+        const isEditingKas = ref(false);
+        const editingKasId = ref(null);
+
         // ─────────── Filters ───────────
         const filters = reactive({ startDate: '', endDate: '', pos: 'all', periodPreset: 'all' });
         const studentSearch = ref('');
 
-        // ─────────── Transaction Form ───────────
+        // ─────────── Forms ───────────
+        const kasForm = reactive({ name: '', model_type: 1 });
+
         const form = reactive({
             date: new Date().toISOString().split('T')[0],
             ref_no: '',
@@ -43,8 +52,14 @@ createApp({
             ikrom_formatted: ''
         });
 
-        // ─────────── Student Form (hanya Nama & Orang Tua) ───────────
-        const studentForm = reactive({ name: '', parent: '' });
+        watch(() => form.name, (newName) => {
+            const student = students.value.find(s => s.name === newName);
+            if (student) {
+                form.ref_no = student.halaqoh || '';
+            }
+        });
+
+        const studentForm = reactive({ name: '', halaqoh: '' });
 
         // ─────────── Report Settings ───────────
         const reportSettings = reactive({
@@ -57,7 +72,6 @@ createApp({
             signer2Role: 'Bendahara',         signer2Name: '( ........................... )',
         });
 
-        // Chart instances
         let monthlyChartInstance = null, posChartInstance = null, trendChartInstance = null;
 
         // ─────────── Helpers ───────────
@@ -94,7 +108,6 @@ createApp({
             };
         });
 
-        // ─────────── Kas Input Masking ───────────
         const onKasInput = (e) => {
             form.kas_amount = parseFormatted(e.target.value);
             form.kas_formatted = form.kas_amount > 0 ? form.kas_amount.toLocaleString('id-ID') : '';
@@ -103,18 +116,82 @@ createApp({
             form.ikrom_amount = parseFormatted(e.target.value);
             form.ikrom_formatted = form.ikrom_amount > 0 ? form.ikrom_amount.toLocaleString('id-ID') : '';
         };
-
-        // ─────────── Select student name in transaction form ───────────
         const onSelectStudentName = (name) => {
             form.name = name;
             if (!form.description) form.description = `Iuran Kas / Donasi (${name})`;
         };
 
+        // ─────────── Kas Books API ───────────
+        const fetchKasBooks = async () => {
+            try {
+                const res = await fetch('/api/kas_books');
+                const json = await res.json();
+                if (json.success) kasBooks.value = json.data || [];
+            } catch (e) { console.error(e); }
+        };
+
+        const selectKas = (kas) => {
+            selectedKas.value = kas;
+            activeTab.value = 'ledger';
+            resetFilters();
+        };
+
+        const backToMenu = () => {
+            selectedKas.value = null;
+        };
+
+        const openCreateKasModal = () => {
+            isEditingKas.value = false;
+            editingKasId.value = null;
+            kasForm.name = '';
+            kasForm.model_type = 1;
+            showKasModal.value = true;
+        };
+
+        const openEditKasModal = (kas) => {
+            isEditingKas.value = true;
+            editingKasId.value = kas.id;
+            kasForm.name = kas.name;
+            kasForm.model_type = kas.model_type;
+            showKasModal.value = true;
+        };
+
+        const closeKasModal = () => { showKasModal.value = false; };
+
+        const saveKasBook = async () => {
+            if (!kasForm.name.trim()) { toast('Nama buku kas wajib diisi!', 'warning'); return; }
+            try {
+                const res = await fetch(
+                    isEditingKas.value ? `/api/kas_books/${editingKasId.value}` : '/api/kas_books',
+                    { method: isEditingKas.value ? 'PUT' : 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(kasForm) }
+                );
+                const json = await res.json();
+                if (json.success) { toast(json.message, 'success'); closeKasModal(); fetchKasBooks(); }
+                else toast(json.error || 'Gagal menyimpan', 'error');
+            } catch (e) { toast('Terjadi kesalahan', 'error'); }
+        };
+
+        const deleteKasBook = (id, name) => {
+            if (id === 1) { toast('Buku kas utama tidak bisa dihapus', 'error'); return; }
+            Swal.fire({ title: 'Hapus Buku Kas?', html: `<b>"${name}"</b>`, icon: 'warning',
+                showCancelButton: true, confirmButtonColor: '#ef4444', cancelButtonColor: '#64748b',
+                confirmButtonText: 'Ya, Hapus!', cancelButtonText: 'Batal'
+            }).then(async r => {
+                if (!r.isConfirmed) return;
+                const res = await fetch(`/api/kas_books/${id}`, { method: 'DELETE' });
+                const json = await res.json();
+                if (json.success) { toast('Buku kas dihapus', 'success'); fetchKasBooks(); }
+                else toast(json.error, 'error');
+            });
+        };
+
         // ─────────── Fetch API ───────────
         const fetchStudents = async () => {
+            if (!selectedKas.value) return;
             studentLoading.value = true;
             try {
                 const params = new URLSearchParams();
+                params.append('kas_id', selectedKas.value.id);
                 if (studentSearch.value.trim()) params.append('search', studentSearch.value.trim());
                 const res = await fetch(`/api/students?${params}`);
                 const json = await res.json();
@@ -124,9 +201,11 @@ createApp({
         };
 
         const fetchTransactions = async () => {
+            if (!selectedKas.value) return;
             loading.value = true;
             try {
                 const params = new URLSearchParams();
+                params.append('kas_id', selectedKas.value.id);
                 if (filters.startDate) params.append('start_date', filters.startDate);
                 if (filters.endDate)   params.append('end_date',   filters.endDate);
                 if (searchInput.value.trim()) params.append('search', searchInput.value.trim());
@@ -139,8 +218,10 @@ createApp({
         };
 
         const fetchSummary = async () => {
+            if (!selectedKas.value) return;
             try {
                 const params = new URLSearchParams();
+                params.append('kas_id', selectedKas.value.id);
                 if (filters.startDate) params.append('start_date', filters.startDate);
                 if (filters.endDate)   params.append('end_date',   filters.endDate);
                 const res = await fetch(`/api/summary?${params}`);
@@ -150,18 +231,19 @@ createApp({
         };
 
         const fetchChartData = async () => {
+            if (!selectedKas.value) return;
             try {
-                const res = await fetch('/api/chart-data');
+                const res = await fetch(`/api/chart-data?kas_id=${selectedKas.value.id}`);
                 const json = await res.json();
                 if (json.success) { chartData.value = json.data; nextTick(() => renderCharts()); }
             } catch (e) { console.error(e); }
         };
 
         const refreshAll = async () => {
+            if (!selectedKas.value) return;
             await Promise.all([fetchTransactions(), fetchStudents(), fetchSummary()]);
         };
 
-        // ─────────── Period Presets ───────────
         const setPeriod = (preset) => {
             filters.periodPreset = preset;
             const now = new Date(), y = now.getFullYear(), mo = now.getMonth();
@@ -226,6 +308,7 @@ createApp({
             if (kasVal + ikromVal <= 0) { toast('Isi nominal Kas atau Ikrom terlebih dahulu', 'warning'); return; }
 
             const payload = {
+                kas_id: selectedKas.value.id,
                 date: form.date, ref_no: form.ref_no, name: form.name.trim(),
                 description: form.description.trim(),
                 kas_in:    form.type === 'in'  ? kasVal  : 0,
@@ -258,16 +341,16 @@ createApp({
             });
         };
 
-        // ─────────── Student Modal (hanya Nama & Orang Tua) ───────────
+        // ─────────── Student Modal ───────────
         const openCreateStudentModal = () => {
             isEditingStudent.value = false; editingStudentId.value = null;
-            Object.assign(studentForm, { name: '', parent: '' });
+            Object.assign(studentForm, { name: '', halaqoh: '' });
             showStudentModal.value = true;
         };
 
         const openEditStudentModal = (s) => {
             isEditingStudent.value = true; editingStudentId.value = s.id;
-            Object.assign(studentForm, { name: s.name, parent: s.parent || '' });
+            Object.assign(studentForm, { name: s.name, halaqoh: s.halaqoh || '' });
             showStudentModal.value = true;
         };
 
@@ -275,10 +358,11 @@ createApp({
 
         const saveStudent = async () => {
             if (!studentForm.name.trim()) { toast('Nama siswa wajib diisi!', 'warning'); return; }
+            const payload = { kas_id: selectedKas.value.id, ...studentForm };
             try {
                 const res = await fetch(
                     isEditingStudent.value ? `/api/students/${editingStudentId.value}` : '/api/students',
-                    { method: isEditingStudent.value ? 'PUT' : 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(studentForm) }
+                    { method: isEditingStudent.value ? 'PUT' : 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) }
                 );
                 const json = await res.json();
                 if (json.success) { toast(json.message, 'success'); closeStudentModal(); fetchStudents(); fetchSummary(); }
@@ -310,6 +394,7 @@ createApp({
         // ─────────── Export / Seed / Reset ───────────
         const exportCSV = () => {
             const params = new URLSearchParams();
+            params.append('kas_id', selectedKas.value.id);
             if (filters.startDate) params.append('start_date', filters.startDate);
             if (filters.endDate)   params.append('end_date',   filters.endDate);
             if (searchInput.value.trim()) params.append('search', searchInput.value.trim());
@@ -323,7 +408,7 @@ createApp({
             }).then(async r => {
                 if (!r.isConfirmed) return;
                 loading.value = true;
-                const res = await fetch('/api/seed', { method: 'POST' });
+                const res = await fetch('/api/seed', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ kas_id: selectedKas.value.id }) });
                 const json = await res.json();
                 if (json.success) { toast('Data demo dimuat!', 'success'); refreshAll(); }
                 loading.value = false;
@@ -335,7 +420,7 @@ createApp({
                 showCancelButton: true, confirmButtonColor: '#dc2626', confirmButtonText: 'Ya, Hapus Semua!', cancelButtonText: 'Batal'
             }).then(async r => {
                 if (!r.isConfirmed) return;
-                const res = await fetch('/api/reset', { method: 'POST' });
+                const res = await fetch('/api/reset', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ kas_id: selectedKas.value.id }) });
                 const json = await res.json();
                 if (json.success) { toast('Data transaksi dibersihkan', 'success'); refreshAll(); }
             });
@@ -353,20 +438,26 @@ createApp({
         const renderCharts = () => {
             if (!chartData.value) return;
             const monthly = chartData.value.monthly || [];
+            
+            const isModel1 = selectedKas.value.model_type === 1;
 
             const monthlyCtx = document.getElementById('monthlyChart');
             if (monthlyCtx) {
                 if (monthlyChartInstance) monthlyChartInstance.destroy();
+                let datasets = [
+                    { label: 'Kas Masuk',   data: monthly.map(m => m.kas_in),   backgroundColor: '#10b981' },
+                    { label: 'Kas Keluar',  data: monthly.map(m => m.kas_out),  backgroundColor: '#f87171' }
+                ];
+                if (isModel1) {
+                    datasets.push({ label: 'Ikrom Masuk', data: monthly.map(m => m.ikrom_in), backgroundColor: '#3b82f6' });
+                    datasets.push({ label: 'Ikrom Keluar',data: monthly.map(m => m.ikrom_out),backgroundColor: '#93c5fd' });
+                }
+
                 monthlyChartInstance = new Chart(monthlyCtx, {
                     type: 'bar',
                     data: {
                         labels: monthly.map(m => m.month) || ['Belum ada data'],
-                        datasets: [
-                            { label: 'Kas Masuk',   data: monthly.map(m => m.kas_in),   backgroundColor: '#10b981' },
-                            { label: 'Kas Keluar',  data: monthly.map(m => m.kas_out),  backgroundColor: '#f87171' },
-                            { label: 'Ikrom Masuk', data: monthly.map(m => m.ikrom_in), backgroundColor: '#3b82f6' },
-                            { label: 'Ikrom Keluar',data: monthly.map(m => m.ikrom_out),backgroundColor: '#93c5fd' },
-                        ]
+                        datasets: datasets
                     },
                     options: { responsive: true, maintainAspectRatio: false,
                         plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${formatRupiah(ctx.raw)}` } } },
@@ -376,7 +467,7 @@ createApp({
             }
 
             const posCtx = document.getElementById('posChart');
-            if (posCtx) {
+            if (posCtx && isModel1) {
                 if (posChartInstance) posChartInstance.destroy();
                 const pos = chartData.value.pos_distribution || {};
                 posChartInstance = new Chart(posCtx, {
@@ -396,7 +487,7 @@ createApp({
                     type: 'line',
                     data: {
                         labels: transactions.value.map(t => formatDate(t.date)),
-                        datasets: [{ label: 'Total Saldo Akumulasi', data: transactions.value.map(t => t.total_balance),
+                        datasets: [{ label: 'Total Saldo Akumulasi', data: transactions.value.map(t => isModel1 ? t.total_balance : t.kas_balance),
                             borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.1)', fill: true, tension: 0.3, pointRadius: 4 }]
                     },
                     options: { responsive: true, maintainAspectRatio: false,
@@ -409,7 +500,7 @@ createApp({
 
         // ─────────── Watchers ───────────
         watch(activeTab, (tab) => {
-            if (tab === 'charts') nextTick(() => fetchChartData());
+            if (tab === 'charts') nextTick(() => renderCharts());
             if (tab === 'students') fetchStudents();
         });
 
@@ -425,18 +516,21 @@ createApp({
             stuSearchTimer = setTimeout(fetchStudents, 300);
         });
 
-        onMounted(() => refreshAll());
+        onMounted(() => fetchKasBooks());
 
         return {
-            transactions, students, summary, chartData,
+            kasBooks, selectedKas, transactions, students, summary, chartData,
             activeTab, loading, studentLoading, searchInput, studentSearch,
             showModal, isEditing, showPrintModal, showStudentModal, isEditingStudent,
+            showKasModal, isEditingKas, kasForm,
             form, formTotal, studentForm, filters, reportSettings, tableTotals,
             formatRupiah, formatDate,
             onKasInput, onIkromInput, onSelectStudentName,
             setPeriod, resetFilters, refreshAll, fetchTransactions, fetchStudents,
             openCreateModal, openEditModal, closeModal, saveTransaction, deleteTransaction,
             openCreateStudentModal, openEditStudentModal, closeStudentModal, saveStudent, deleteStudent,
+            openCreateKasModal, openEditKasModal, closeKasModal, saveKasBook, deleteKasBook,
+            selectKas, backToMenu,
             filterByStudent, exportCSV, seedDemoData, resetAllData,
             openPrintModal, triggerPrint,
         };

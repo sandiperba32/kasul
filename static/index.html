@@ -20,7 +20,7 @@
 
             <!-- Brand -->
             <div class="flex items-center space-x-6">
-                <div class="flex items-center space-x-3 cursor-pointer" @click="activeTab='ledger'">
+                <div class="flex items-center space-x-3 cursor-pointer" @click="selectedKas ? null : null">
                     <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-200">
                         <i class="fa-solid fa-book-bookmark text-lg"></i>
                     </div>
@@ -29,18 +29,25 @@
                             SI-KAS & IKROM
                             <span class="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full">v1.2</span>
                         </h1>
-                        <p class="text-xs text-slate-500 font-medium">Buku Kas &bull; Dana Ikrom &bull; Master Siswa</p>
+                        <p v-if="selectedKas" class="text-xs text-slate-500 font-medium">
+                            <i class="fa-solid fa-folder-open text-emerald-500 mr-1"></i>
+                            {{ selectedKas.name }}
+                            <span class="ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold" :class="selectedKas.model_type===1 ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'">
+                                {{ selectedKas.model_type===1 ? 'Model 1 (Kas+Ikrom)' : 'Model 2 (Kas)' }}
+                            </span>
+                        </p>
+                        <p v-else class="text-xs text-slate-500 font-medium">Pilih Buku Kas untuk memulai</p>
                     </div>
                 </div>
 
-                <!-- Tabs -->
-                <nav class="hidden md:flex space-x-1 border-l border-slate-200 pl-6">
+                <!-- Tabs (only shown when a Kas is selected) -->
+                <nav v-if="selectedKas" class="hidden md:flex space-x-1 border-l border-slate-200 pl-6">
                     <button @click="activeTab='ledger'"
                             :class="activeTab==='ledger' ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'text-slate-600 hover:bg-slate-100'"
                             class="px-3 py-1.5 rounded-lg text-sm transition-all flex items-center gap-2">
                         <i class="fa-solid fa-table-columns"></i> Buku Kas
                     </button>
-                    <button @click="activeTab='students'"
+                    <button v-if="selectedKas.model_type === 1" @click="activeTab='students'"
                             :class="activeTab==='students' ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'text-slate-600 hover:bg-slate-100'"
                             class="px-3 py-1.5 rounded-lg text-sm transition-all flex items-center gap-2">
                         <i class="fa-solid fa-graduation-cap"></i> Master Siswa
@@ -56,39 +63,134 @@
 
             <!-- Actions -->
             <div class="flex items-center space-x-2">
-                <button v-if="activeTab==='students'" @click="openCreateStudentModal"
-                        class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-sm flex items-center gap-2">
-                    <i class="fa-solid fa-user-plus"></i> Tambah Siswa
+                <!-- Back Button (when kas is selected) -->
+                <button v-if="selectedKas" @click="backToMenu"
+                        class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-sm font-semibold px-3 py-2 rounded-lg flex items-center gap-2">
+                    <i class="fa-solid fa-chevron-left text-xs"></i> <span class="hidden sm:inline">Menu Utama</span>
                 </button>
-                <button v-else @click="openCreateModal"
-                        class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-sm flex items-center gap-2">
-                    <i class="fa-solid fa-plus-circle"></i> <span class="hidden sm:inline">Tambah</span> Transaksi
-                </button>
-                <button @click="openPrintModal" class="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-sm font-medium px-3 py-2 rounded-lg flex items-center gap-1.5">
-                    <i class="fa-solid fa-print"></i> <span class="hidden md:inline">Cetak</span>
-                </button>
-                <button @click="exportCSV" class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-sm font-medium px-3 py-2 rounded-lg flex items-center gap-1.5">
-                    <i class="fa-solid fa-file-excel text-emerald-600"></i> <span class="hidden md:inline">Excel</span>
-                </button>
-                <div class="relative group">
-                    <button class="bg-slate-100 hover:bg-slate-200 text-slate-600 p-2 rounded-lg">
-                        <i class="fa-solid fa-ellipsis-vertical"></i>
+
+                <template v-if="selectedKas">
+                    <button v-if="activeTab==='students' && selectedKas.model_type===1" @click="openCreateStudentModal"
+                            class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-sm flex items-center gap-2">
+                        <i class="fa-solid fa-user-plus"></i> Tambah Siswa
                     </button>
-                    <div class="absolute right-0 mt-1 w-48 bg-white rounded-xl shadow-lg border border-slate-100 py-1 hidden group-hover:block z-50">
-                        <button @click="seedDemoData" class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2">
-                            <i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i> Muat Data Contoh
+                    <button v-else-if="activeTab!=='students'" @click="openCreateModal"
+                            class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-sm flex items-center gap-2">
+                        <i class="fa-solid fa-plus-circle"></i> <span class="hidden sm:inline">Tambah</span> Transaksi
+                    </button>
+                    <button @click="openPrintModal" class="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-sm font-medium px-3 py-2 rounded-lg flex items-center gap-1.5">
+                        <i class="fa-solid fa-print"></i> <span class="hidden md:inline">Cetak</span>
+                    </button>
+                    <button @click="exportCSV" class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-sm font-medium px-3 py-2 rounded-lg flex items-center gap-1.5">
+                        <i class="fa-solid fa-file-excel text-emerald-600"></i> <span class="hidden md:inline">Excel</span>
+                    </button>
+                    <div class="relative group">
+                        <button class="bg-slate-100 hover:bg-slate-200 text-slate-600 p-2 rounded-lg">
+                            <i class="fa-solid fa-ellipsis-vertical"></i>
                         </button>
-                        <button @click="resetAllData" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
-                            <i class="fa-solid fa-trash-can text-red-500"></i> Kosongkan Transaksi
-                        </button>
+                        <div class="absolute right-0 mt-1 w-48 bg-white rounded-xl shadow-lg border border-slate-100 py-1 hidden group-hover:block z-50">
+                            <button @click="seedDemoData" class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                                <i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i> Muat Data Contoh
+                            </button>
+                            <button @click="resetAllData" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
+                                <i class="fa-solid fa-trash-can text-red-500"></i> Kosongkan Transaksi
+                            </button>
+                        </div>
                     </div>
-                </div>
+                </template>
+
+                <!-- Add Kas button (when on main menu) -->
+                <button v-if="!selectedKas" @click="openCreateKasModal"
+                        class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-sm flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> Tambah Daftar Kas
+                </button>
             </div>
         </div>
     </header>
 
     <!-- ══════════════ MAIN ══════════════ -->
     <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-1">
+
+        <!-- ══════════════ MENU UTAMA: DAFTAR KAS ══════════════ -->
+        <div v-if="!selectedKas">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-lg mb-4">
+                    <i class="fa-solid fa-book-bookmark text-2xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-slate-900">Daftar Buku Kas</h2>
+                <p class="text-slate-500 mt-1 text-sm">Pilih buku kas yang ingin dibuka, atau tambahkan baru</p>
+            </div>
+
+            <!-- Loading state -->
+            <div v-if="kasBooks.length === 0" class="bg-white rounded-2xl border border-dashed border-slate-300 p-16 text-center">
+                <i class="fa-solid fa-book-open text-5xl text-slate-200 mb-4"></i>
+                <p class="text-slate-500 font-medium">Belum ada buku kas.</p>
+                <button @click="openCreateKasModal" class="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl shadow-md flex items-center gap-2 mx-auto">
+                    <i class="fa-solid fa-plus"></i> Tambah Buku Kas Pertama
+                </button>
+            </div>
+
+            <!-- Kas List -->
+            <div v-else class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                    <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-list text-emerald-600"></i>
+                        {{ kasBooks.length }} Buku Kas Tersedia
+                    </h3>
+                    <button @click="openCreateKasModal" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-sm flex items-center gap-2">
+                        <i class="fa-solid fa-plus"></i> Tambah Buku Kas
+                    </button>
+                </div>
+                <div class="divide-y divide-slate-100">
+                    <div v-for="(kas, idx) in kasBooks" :key="kas.id"
+                         class="flex items-center gap-4 px-6 py-5 hover:bg-slate-50/60 transition-colors group">
+                        <!-- Number -->
+                        <div class="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0"
+                             :class="kas.model_type === 1 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'">
+                            {{ idx + 1 }}
+                        </div>
+
+                        <!-- Info -->
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-slate-900 text-base">{{ kas.name }}</span>
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                                      :class="kas.model_type === 1 ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'">
+                                    {{ kas.model_type === 1 ? 'Model 1 — Kas + Ikrom + Halaqoh' : 'Model 2 — Kas Standar' }}
+                                </span>
+                            </div>
+                            <p class="text-xs text-slate-400 mt-0.5">
+                                <i class="fa-solid fa-calendar-days mr-1"></i>
+                                Dibuat: {{ new Date(kas.created_at).toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'}) }}
+                            </p>
+                        </div>
+
+                        <!-- Actions: Edit & Delete (small, right-aligned) -->
+                        <div class="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button @click.stop="openEditKasModal(kas)"
+                                    class="text-slate-400 hover:text-blue-600 p-2 rounded-lg hover:bg-blue-50 transition-colors text-sm"
+                                    title="Edit Buku Kas">
+                                <i class="fa-regular fa-pen-to-square"></i>
+                            </button>
+                            <button @click.stop="deleteKasBook(kas.id, kas.name)"
+                                    class="text-slate-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition-colors text-sm"
+                                    title="Hapus Buku Kas">
+                                <i class="fa-regular fa-trash-can"></i>
+                            </button>
+                        </div>
+
+                        <!-- Open Button (large, prominent) -->
+                        <button @click="selectKas(kas); refreshAll();"
+                                class="flex-shrink-0 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold px-6 py-3 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 text-sm ml-4">
+                            <i class="fa-solid fa-folder-open"></i> Buka
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════ KAS CONTENT (shown when a kas is selected) ══════════════ -->
+        <div v-if="selectedKas" class="space-y-6">
 
         <!-- ── Dashboard Cards ── -->
         <section class="no-print grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -179,7 +281,7 @@
                 </div>
                 <div class="relative">
                     <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-sm"></i>
-                    <input type="text" v-model="searchInput" placeholder="Cari nama siswa, keterangan, atau nomor bukti..."
+                    <input type="text" v-model="searchInput" placeholder="Cari nama siswa, keterangan, atau halaqoh..."
                            class="w-full bg-slate-50 border border-slate-200 pl-10 pr-4 py-2 rounded-xl text-sm placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all">
                 </div>
             </section>
@@ -192,14 +294,14 @@
                             <tr class="bg-slate-100/80 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
                                 <th rowspan="2" class="py-3 px-3 text-center border-r border-slate-200 w-10">No</th>
                                 <th rowspan="2" class="py-3 px-3 border-r border-slate-200 w-24">Tanggal</th>
-                                <th rowspan="2" class="py-3 px-3 border-r border-slate-200 w-28">No. Bukti</th>
+                                <th rowspan="2" class="py-3 px-3 border-r border-slate-200 w-28">Halaqoh</th>
                                 <th rowspan="2" class="py-3 px-4 border-r border-slate-200 min-w-[160px]">Nama Siswa / Pihak</th>
                                 <th rowspan="2" class="py-3 px-4 border-r border-slate-200 min-w-[200px]">Uraian / Keterangan</th>
                                 <th colspan="3" class="py-2 px-2 text-center border-r border-emerald-200 pos-kas-header">
-                                    <i class="fa-solid fa-wallet mr-1"></i> POS KAS UTAMA
+                                    <i class="fa-solid fa-wallet mr-1"></i> KAS
                                 </th>
                                 <th colspan="3" class="py-2 px-2 text-center border-r border-blue-200 pos-ikrom-header">
-                                    <i class="fa-solid fa-hand-holding-heart mr-1"></i> POS DANA IKROM
+                                    <i class="fa-solid fa-hand-holding-heart mr-1"></i> IKROM
                                 </th>
                                 <th rowspan="2" class="py-3 px-4 text-center border-r border-purple-200 pos-total-header">
                                     <i class="fa-solid fa-vault mr-1"></i> TOTAL SALDO
@@ -297,17 +399,17 @@
                 <div class="flex items-center gap-2">
                     <div class="relative">
                         <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
-                        <input type="text" v-model="studentSearch" placeholder="Cari nama / wali..."
-                               class="bg-slate-50 border border-slate-200 pl-8 pr-3 py-1.5 rounded-lg text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-52">
+                        <input type="text" v-model="studentSearch" placeholder="Cari nama / halaqoh..."
+                               class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                     </div>
                     <button @click="openCreateStudentModal"
-                            class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-xs flex items-center gap-1.5">
-                        <i class="fa-solid fa-plus"></i> Tambah Siswa
+                            class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm">
+                        <i class="fa-solid fa-plus"></i> Tambah Siswa Baru
                     </button>
                 </div>
             </section>
 
-            <!-- Students Table (kolom: No, Nama Siswa, Nama Orang Tua, Aksi) -->
+            <!-- Students Table (kolom: No, Nama Siswa, Halaqoh, Aksi) -->
             <section class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse text-sm">
@@ -315,7 +417,7 @@
                             <tr class="bg-slate-100/80 border-b border-slate-200 text-slate-600 font-bold text-xs uppercase tracking-wider">
                                 <th class="py-3 px-4 border-r border-slate-200 w-12 text-center">No</th>
                                 <th class="py-3 px-5 border-r border-slate-200">Nama Lengkap Siswa</th>
-                                <th class="py-3 px-5 border-r border-slate-200">Nama Orang Tua / Wali</th>
+                                <th class="py-3 px-5 border-r border-slate-200">Halaqoh</th>
                                 <th class="py-3 px-4 text-center w-36">Aksi</th>
                             </tr>
                         </thead>
@@ -346,7 +448,7 @@
                                     </div>
                                 </td>
                                 <td class="py-3 px-5 border-r border-slate-100 text-slate-600">
-                                    {{ s.parent || '-' }}
+                                    {{ s.halaqoh || '-' }}
                                 </td>
                                 <td class="py-3 px-4 text-center">
                                     <div class="flex items-center justify-center space-x-2">
@@ -395,6 +497,8 @@
             </div>
         </div>
 
+        </div><!-- end v-if="selectedKas" wrapper -->
+
     </main>
 
     <!-- Footer -->
@@ -406,6 +510,77 @@
             </div>
         </div>
     </footer>
+
+    <!-- ══════════════ MODAL: TAMBAH/EDIT BUKU KAS ══════════════ -->
+    <div v-if="showKasModal" class="no-print fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden border border-slate-100">
+            <div class="px-6 py-4 bg-emerald-900 text-white flex items-center justify-between">
+                <div class="flex items-center space-x-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-500/30 text-emerald-300 flex items-center justify-center">
+                        <i class="fa-solid fa-book-bookmark"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-base">{{ isEditingKas ? 'Edit Buku Kas' : 'Tambah Buku Kas Baru' }}</h3>
+                        <p class="text-xs text-emerald-300">Kelola daftar buku kas</p>
+                    </div>
+                </div>
+                <button @click="closeKasModal" class="text-emerald-300 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <form @submit.prevent="saveKasBook" class="p-6 space-y-5">
+                <!-- Nama -->
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1.5">
+                        <i class="fa-solid fa-bookmark text-emerald-600 mr-1"></i>
+                        Nama Buku Kas <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" v-model="kasForm.name" required
+                           placeholder="Contoh: Kas Sulaimaniah"
+                           class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none focus:bg-white transition-all">
+                </div>
+
+                <!-- Model -->
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">
+                        <i class="fa-solid fa-layer-group text-emerald-600 mr-1"></i>
+                        Model Buku Kas <span class="text-red-500">*</span>
+                    </label>
+                    <div class="space-y-2">
+                        <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-all"
+                               :class="kasForm.model_type === 1 ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 bg-white hover:bg-slate-50'">
+                            <input type="radio" v-model="kasForm.model_type" :value="1" class="mt-0.5 accent-emerald-600">
+                            <div>
+                                <div class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                                    Model 1
+                                    <span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">Kas + Ikrom + Halaqoh</span>
+                                </div>
+                                <p class="text-xs text-slate-500 mt-0.5">Memiliki kolom Kas, Dana Ikrom, dan Halaqoh siswa. Cocok untuk kas pesantren / madrasah.</p>
+                            </div>
+                        </label>
+                        <label class="flex items-start gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-all"
+                               :class="kasForm.model_type === 2 ? 'border-slate-500 bg-slate-50' : 'border-slate-200 bg-white hover:bg-slate-50'">
+                            <input type="radio" v-model="kasForm.model_type" :value="2" class="mt-0.5 accent-slate-600">
+                            <div>
+                                <div class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                                    Model 2
+                                    <span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-bold">Kas Standar</span>
+                                </div>
+                                <p class="text-xs text-slate-500 mt-0.5">Hanya kolom Kas masuk dan keluar, tanpa Ikrom dan Halaqoh. Cocok untuk kas umum/sederhana.</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="pt-3 border-t border-slate-200 flex items-center justify-end space-x-2">
+                    <button type="button" @click="closeKasModal" class="px-4 py-2.5 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100">Batal</button>
+                    <button type="submit" class="px-6 py-2.5 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-md flex items-center gap-2">
+                        <i class="fa-solid fa-check"></i> Simpan Buku Kas
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- ══════════════ MODAL: INPUT TRANSAKSI ══════════════ -->
     <div v-if="showModal" class="no-print fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
@@ -425,7 +600,7 @@
 
             <form @submit.prevent="saveTransaction" class="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
 
-                <!-- Tanggal & Nomor Bukti -->
+                <!-- Tanggal & Halaqoh -->
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">
@@ -436,9 +611,9 @@
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">
-                            <i class="fa-solid fa-receipt text-emerald-600 mr-1"></i> Nomor Bukti
+                            <i class="fa-solid fa-receipt text-emerald-600 mr-1"></i> Halaqoh
                         </label>
-                        <input type="text" v-model="form.ref_no" placeholder="BKM-001"
+                        <input type="text" v-model="form.ref_no" placeholder="Contoh: A"
                                class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none font-mono">
                     </div>
                 </div>
@@ -463,7 +638,7 @@
                            class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none font-medium">
                     <datalist id="student-datalist">
                         <option v-for="s in students" :key="s.id" :value="s.name">
-                            {{ s.name }}{{ s.parent ? ' — Wali: ' + s.parent : '' }}
+                            {{ s.name }}{{ s.halaqoh ? ' — Halaqoh: ' + s.halaqoh : '' }}
                         </option>
                     </datalist>
 
@@ -572,7 +747,7 @@
         </div>
     </div>
 
-    <!-- ══════════════ MODAL: MASTER DATA SISWA (hanya Nama & Orang Tua) ══════════════ -->
+    <!-- ══════════════ MODAL: MASTER DATA SISWA (hanya Nama & Halaqoh) ══════════════ -->
     <div v-if="showStudentModal" class="no-print fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
         <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden border border-slate-100">
             <div class="px-6 py-4 bg-indigo-900 text-white flex items-center justify-between">
@@ -601,14 +776,14 @@
                            class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none focus:bg-white transition-all">
                 </div>
 
-                <!-- Nama Orang Tua -->
+                <!-- Halaqoh -->
                 <div>
                     <label class="block text-sm font-bold text-slate-700 mb-1.5">
                         <i class="fa-solid fa-users text-indigo-500 mr-1"></i>
-                        Nama Orang Tua / Wali
+                        Halaqoh
                     </label>
-                    <input type="text" v-model="studentForm.parent"
-                           placeholder="Contoh: Bpk. Hendra Saputra"
+                    <input type="text" v-model="studentForm.halaqoh"
+                           placeholder="Contoh: A"
                            class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none focus:bg-white transition-all">
                 </div>
 
@@ -679,8 +854,8 @@
                 </tr>
             </thead>
             <tbody>
-                <tr><td><b>1. Pos Kas Utama</b></td><td style="text-align:right;">{{ formatRupiah(summary.total_kas_in) }}</td><td style="text-align:right;">{{ formatRupiah(summary.total_kas_out) }}</td><td style="text-align:right;font-weight:bold;">{{ formatRupiah(summary.saldo_kas) }}</td></tr>
-                <tr><td><b>2. Pos Dana Ikrom</b></td><td style="text-align:right;">{{ formatRupiah(summary.total_ikrom_in) }}</td><td style="text-align:right;">{{ formatRupiah(summary.total_ikrom_out) }}</td><td style="text-align:right;font-weight:bold;">{{ formatRupiah(summary.saldo_ikrom) }}</td></tr>
+                <tr><td><b>1. Kas</b></td><td style="text-align:right;">{{ formatRupiah(summary.total_kas_in) }}</td><td style="text-align:right;">{{ formatRupiah(summary.total_kas_out) }}</td><td style="text-align:right;font-weight:bold;">{{ formatRupiah(summary.saldo_kas) }}</td></tr>
+                <tr><td><b>2. Ikrom</b></td><td style="text-align:right;">{{ formatRupiah(summary.total_ikrom_in) }}</td><td style="text-align:right;">{{ formatRupiah(summary.total_ikrom_out) }}</td><td style="text-align:right;font-weight:bold;">{{ formatRupiah(summary.saldo_ikrom) }}</td></tr>
                 <tr style="background:#f8fafc;font-weight:bold;"><td>GRAND TOTAL</td><td style="text-align:right;">{{ formatRupiah(summary.total_masuk) }}</td><td style="text-align:right;">{{ formatRupiah(summary.total_keluar) }}</td><td style="text-align:right;">{{ formatRupiah(summary.total_saldo) }}</td></tr>
             </tbody>
         </table>
@@ -688,10 +863,10 @@
         <table class="print-table" style="width:100%; font-size:8.5pt;">
             <thead>
                 <tr style="background:#f1f5f9;">
-                    <th rowspan="2">No</th><th rowspan="2">Tanggal</th><th rowspan="2">No. Bukti</th>
+                    <th rowspan="2">No</th><th rowspan="2">Tanggal</th><th rowspan="2">Halaqoh</th>
                     <th rowspan="2" style="text-align:left;">Nama</th><th rowspan="2" style="text-align:left;">Keterangan</th>
-                    <th colspan="3">POS KAS UTAMA</th>
-                    <th colspan="3">POS DANA IKROM</th>
+                    <th colspan="3">KAS</th>
+                    <th colspan="3">IKROM</th>
                     <th rowspan="2">TOTAL SALDO</th>
                 </tr>
                 <tr style="background:#f8fafc;font-size:8pt;"><th>Masuk</th><th>Keluar</th><th>Saldo</th><th>Masuk</th><th>Keluar</th><th>Saldo</th></tr>
