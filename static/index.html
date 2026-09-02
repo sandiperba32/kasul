@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aplikasi Buku Kas & Dana Ikrom</title>
+    <script>
+        // Tailwind dark mode: class-based
+        tailwind = { darkMode: 'class' };
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -12,6 +16,25 @@
     <link rel="stylesheet" href="/style.css">
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+
+<!-- ══════════════ LOGIN OVERLAY ══════════════ -->
+<div id="login-overlay">
+    <div class="login-card">
+        <div class="login-icon">
+            <i class="fa-solid fa-book-bookmark text-white text-2xl"></i>
+        </div>
+        <h2>SI-KAS & IKROM</h2>
+        <p>Masukkan password untuk mengakses aplikasi</p>
+        <div class="login-input-wrap">
+            <i class="fa-solid fa-lock left"></i>
+            <input type="password" id="login-password-input" placeholder="Masukkan password..." autofocus>
+            <i class="fa-solid fa-eye right" id="toggle-pw-icon" onclick="toggleLoginPw()"></i>
+        </div>
+        <div id="login-error"><i class="fa-solid fa-circle-exclamation mr-1"></i>Password salah, coba lagi!</div>
+        <button id="login-btn" onclick="doLogin()"><i class="fa-solid fa-right-to-bracket mr-2"></i>Masuk</button>
+    </div>
+</div>
+
 <div id="app" class="flex-1 flex flex-col">
 
     <!-- ══════════════ HEADER / NAVBAR ══════════════ -->
@@ -63,6 +86,13 @@
 
             <!-- Actions -->
             <div class="flex items-center space-x-2">
+                <!-- Dark Mode Toggle -->
+                <button onclick="toggleDarkMode()" id="dark-toggle-btn"
+                        class="bg-slate-100 hover:bg-slate-200 text-slate-600 p-2 rounded-lg transition-all"
+                        title="Ganti Tema">
+                    <i id="dark-icon" class="fa-solid fa-moon text-sm"></i>
+                </button>
+
                 <!-- Back Button (when kas is selected) -->
                 <button v-if="selectedKas" @click="backToMenu"
                         class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-sm font-semibold px-3 py-2 rounded-lg flex items-center gap-2">
@@ -914,5 +944,105 @@
 
 </div>
 <script src="/app.js"></script>
+<script>
+    // ══════════════ LOGIN (Server-Side Auth) ══════════════
+    // Password is verified on the server — it never appears in this file.
+    const SESSION_KEY = 'kas_token';
+
+    async function doLogin() {
+        const input  = document.getElementById('login-password-input');
+        const errEl  = document.getElementById('login-error');
+        const btn    = document.getElementById('login-btn');
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Memeriksa...';
+
+        try {
+            const res  = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: input.value })
+            });
+            const json = await res.json();
+
+            if (json.success && json.token) {
+                sessionStorage.setItem(SESSION_KEY, json.token);
+                const overlay = document.getElementById('login-overlay');
+                overlay.classList.add('hidden');
+                setTimeout(() => overlay.remove(), 450);
+            } else {
+                errEl.style.display = 'block';
+                input.value = '';
+                input.focus();
+                input.style.borderColor = '#f87171';
+                setTimeout(() => { input.style.borderColor = ''; }, 1500);
+            }
+        } catch (e) {
+            errEl.style.display = 'block';
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-right-to-bracket mr-2"></i>Masuk';
+        }
+    }
+
+    function toggleLoginPw() {
+        const inp  = document.getElementById('login-password-input');
+        const icon = document.getElementById('toggle-pw-icon');
+        if (inp.type === 'password') {
+            inp.type = 'text';
+            icon.classList.replace('fa-eye', 'fa-eye-slash');
+        } else {
+            inp.type = 'password';
+            icon.classList.replace('fa-eye-slash', 'fa-eye');
+        }
+    }
+
+    document.getElementById('login-password-input').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') doLogin();
+    });
+
+    // Validate existing session with server on page load
+    (async function checkSession() {
+        const token = sessionStorage.getItem(SESSION_KEY);
+        if (!token) return; // no token → stay on login
+        try {
+            const res  = await fetch('/api/auth/check', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token })
+            });
+            const json = await res.json();
+            if (json.success) {
+                document.getElementById('login-overlay').remove();
+            } else {
+                sessionStorage.removeItem(SESSION_KEY); // expired or invalid
+            }
+        } catch (e) { /* stay on login */ }
+    })();
+
+    // ══════════════ DARK MODE ══════════════
+    const DARK_KEY = 'kas_dark_mode';
+
+    function applyTheme(isDark) {
+        const html = document.documentElement;
+        const icon = document.getElementById('dark-icon');
+        if (isDark) {
+            html.classList.add('dark');
+            if (icon) { icon.classList.replace('fa-moon', 'fa-sun'); }
+        } else {
+            html.classList.remove('dark');
+            if (icon) { icon.classList.replace('fa-sun', 'fa-moon'); }
+        }
+    }
+
+    function toggleDarkMode() {
+        const isDark = document.documentElement.classList.contains('dark');
+        localStorage.setItem(DARK_KEY, isDark ? '0' : '1');
+        applyTheme(!isDark);
+    }
+
+    // Init theme on load
+    applyTheme(localStorage.getItem(DARK_KEY) === '1');
+</script>
 </body>
 </html>

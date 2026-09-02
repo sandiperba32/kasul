@@ -136,6 +136,10 @@ func main() {
 	mux.HandleFunc("/api/seed", handlers.SeedData)
 	mux.HandleFunc("/api/reset", handlers.ResetData)
 
+	// Auth Routes
+	mux.HandleFunc("/api/auth/login", handlers.Login)
+	mux.HandleFunc("/api/auth/check", handlers.CheckSession)
+
 	// Static Frontend Server
 	fs := http.FileServer(http.Dir("./static"))
 	mux.Handle("/", fs)

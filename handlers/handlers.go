@@ -1,7 +1,10 @@
 package handlers
 
 import (
+	"crypto/rand"
+	"crypto/subtle"
 	"encoding/csv"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"kas-app/db"
@@ -9,7 +12,13 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 )
+
+// ─────────────────────────────────────────────
+//  JSON response helpers
+// ─────────────────────────────────────────────
 
 func writeJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -20,6 +29,97 @@ func writeJSON(w http.ResponseWriter, status int, data interface{}) {
 func writeError(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, map[string]string{"error": message})
 }
+
+// ─────────────────────────────────────────────
+//  Auth: server-side password verification
+//  Password is NEVER sent to the client.
+// ─────────────────────────────────────────────
+
+const appPassword = "781232"
+
+// sessionStore holds valid session tokens in memory.
+// Token -> expiry time. Sessions last 8 hours.
+var (
+	sessionStore   = make(map[string]time.Time)
+	sessionMu      sync.RWMutex
+	sessionTTL     = 8 * time.Hour
+)
+
+func generateToken() (string, error) {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
+}
+
+func isValidSession(token string) bool {
+	sessionMu.RLock()
+	exp, ok := sessionStore[token]
+	sessionMu.RUnlock()
+	return ok && time.Now().Before(exp)
+}
+
+// Login verifies password and returns a session token on success.
+// POST /api/auth/login  { "password": "..." }
+func Login(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+	var body struct {
+		Password string `json:"password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "Bad request")
+		return
+	}
+
+	// Use constant-time comparison to prevent timing attacks
+	match := subtle.ConstantTimeCompare([]byte(body.Password), []byte(appPassword)) == 1
+	if !match {
+		// Small delay to slow brute-force
+		time.Sleep(400 * time.Millisecond)
+		writeJSON(w, http.StatusUnauthorized, map[string]interface{}{"success": false, "error": "Password salah"})
+		return
+	}
+
+	token, err := generateToken()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Gagal membuat sesi")
+		return
+	}
+	sessionMu.Lock()
+	sessionStore[token] = time.Now().Add(sessionTTL)
+	// Cleanup old sessions
+	for k, v := range sessionStore {
+		if time.Now().After(v) {
+			delete(sessionStore, k)
+		}
+	}
+	sessionMu.Unlock()
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true, "token": token})
+}
+
+// CheckSession validates a session token.
+// POST /api/auth/check  { "token": "..." }
+func CheckSession(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+	var body struct {
+		Token string `json:"token"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "Bad request")
+		return
+	}
+	valid := isValidSession(body.Token)
+	writeJSON(w, http.StatusOK, map[string]interface{}{"success": valid})
+}
+
 
 func getKasIDFromQuery(r *http.Request) int64 {
 	kasIDStr := r.URL.Query().Get("kas_id")
