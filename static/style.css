@@ -306,10 +306,16 @@ body {
 
 /* Print Specific Styles */
 @media print {
+    @page {
+        size: landscape;
+        margin: 0;
+    }
+
     body {
         background-color: #ffffff !important;
         color: #000000 !important;
         font-size: 10pt;
+        padding: 10mm !important;
     }
 
     .no-print, header, nav, .filter-toolbar, .action-buttons, .modal-backdrop, .toast, .swal2-container {
@@ -344,11 +350,6 @@ body {
         background-color: #e2e8f0 !important;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
-    }
-
-    @page {
-        size: landscape;
-        margin: 10mm;
     }
 }
 

@@ -472,9 +472,17 @@ func ExportCSV(w http.ResponseWriter, r *http.Request) {
 	writer := csv.NewWriter(w)
 	defer writer.Flush()
 
-	_ = writer.Write([]string{"No", "Tanggal", "No. Bukti", "Nama", "Keterangan",
-		"Kas Masuk", "Kas Keluar", "Saldo Kas",
-		"Ikrom Masuk", "Ikrom Keluar", "Saldo Ikrom", "Total Saldo"})
+	kasBook, _ := db.GetKasBookByID(kasID)
+	isModel1 := kasBook == nil || kasBook.ModelType == 1
+
+	if isModel1 {
+		_ = writer.Write([]string{"No", "Tanggal", "No. Bukti", "Nama", "Keterangan",
+			"Kas Masuk", "Kas Keluar", "Saldo Kas",
+			"Ikrom Masuk", "Ikrom Keluar", "Saldo Ikrom", "Total Saldo"})
+	} else {
+		_ = writer.Write([]string{"No", "Tanggal", "No. Bukti", "Nama", "Keterangan",
+			"Kas Masuk", "Kas Keluar", "Saldo Kas"})
+	}
 
 	var totalKasIn, totalKasOut, totalIkromIn, totalIkromOut float64
 	for i, t := range txns {
@@ -482,18 +490,31 @@ func ExportCSV(w http.ResponseWriter, r *http.Request) {
 		totalKasOut += t.KasOut
 		totalIkromIn += t.IkromIn
 		totalIkromOut += t.IkromOut
-		_ = writer.Write([]string{
-			strconv.Itoa(i + 1), t.Date, t.RefNo, t.Name, t.Description,
-			fmt.Sprintf("%.0f", t.KasIn), fmt.Sprintf("%.0f", t.KasOut), fmt.Sprintf("%.0f", t.KasBalance),
-			fmt.Sprintf("%.0f", t.IkromIn), fmt.Sprintf("%.0f", t.IkromOut), fmt.Sprintf("%.0f", t.IkromBalance),
-			fmt.Sprintf("%.0f", t.TotalBalance),
+		if isModel1 {
+			_ = writer.Write([]string{
+				strconv.Itoa(i + 1), t.Date, t.RefNo, t.Name, t.Description,
+				fmt.Sprintf("%.0f", t.KasIn), fmt.Sprintf("%.0f", t.KasOut), fmt.Sprintf("%.0f", t.KasBalance),
+				fmt.Sprintf("%.0f", t.IkromIn), fmt.Sprintf("%.0f", t.IkromOut), fmt.Sprintf("%.0f", t.IkromBalance),
+				fmt.Sprintf("%.0f", t.TotalBalance),
+			})
+		} else {
+			_ = writer.Write([]string{
+				strconv.Itoa(i + 1), t.Date, t.RefNo, t.Name, t.Description,
+				fmt.Sprintf("%.0f", t.KasIn), fmt.Sprintf("%.0f", t.KasOut), fmt.Sprintf("%.0f", t.KasBalance),
+			})
+		}
+	}
+	if isModel1 {
+		_ = writer.Write([]string{"TOTAL", "", "", "", "TOTAL AKUMULASI",
+			fmt.Sprintf("%.0f", totalKasIn), fmt.Sprintf("%.0f", totalKasOut), fmt.Sprintf("%.0f", totalKasIn-totalKasOut),
+			fmt.Sprintf("%.0f", totalIkromIn), fmt.Sprintf("%.0f", totalIkromOut), fmt.Sprintf("%.0f", totalIkromIn-totalIkromOut),
+			fmt.Sprintf("%.0f", (totalKasIn-totalKasOut)+(totalIkromIn-totalIkromOut)),
+		})
+	} else {
+		_ = writer.Write([]string{"TOTAL", "", "", "", "TOTAL AKUMULASI",
+			fmt.Sprintf("%.0f", totalKasIn), fmt.Sprintf("%.0f", totalKasOut), fmt.Sprintf("%.0f", totalKasIn-totalKasOut),
 		})
 	}
-	_ = writer.Write([]string{"TOTAL", "", "", "", "TOTAL AKUMULASI",
-		fmt.Sprintf("%.0f", totalKasIn), fmt.Sprintf("%.0f", totalKasOut), fmt.Sprintf("%.0f", totalKasIn-totalKasOut),
-		fmt.Sprintf("%.0f", totalIkromIn), fmt.Sprintf("%.0f", totalIkromOut), fmt.Sprintf("%.0f", totalIkromIn-totalIkromOut),
-		fmt.Sprintf("%.0f", (totalKasIn-totalKasOut)+(totalIkromIn-totalIkromOut)),
-	})
 }
 
 func SeedData(w http.ResponseWriter, r *http.Request) {

@@ -8,11 +8,12 @@
         // Tailwind dark mode: class-based
         tailwind = { darkMode: 'class' };
     </script>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Local offline vendor scripts with CDN fallback -->
+    <script src="/tailwindcss.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="/chart.umd.js"></script>
+    <script src="/sweetalert2.all.min.js"></script>
+    <script src="/vue.global.prod.js"></script>
     <link rel="stylesheet" href="/style.css">
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
@@ -70,7 +71,7 @@
                             class="px-3 py-1.5 rounded-lg text-sm transition-all flex items-center gap-2">
                         <i class="fa-solid fa-table-columns"></i> Buku Kas
                     </button>
-                    <button v-if="selectedKas.model_type === 1" @click="activeTab='students'"
+                    <button @click="activeTab='students'"
                             :class="activeTab==='students' ? 'bg-emerald-50 text-emerald-700 font-semibold' : 'text-slate-600 hover:bg-slate-100'"
                             class="px-3 py-1.5 rounded-lg text-sm transition-all flex items-center gap-2">
                         <i class="fa-solid fa-graduation-cap"></i> Master Siswa
@@ -100,7 +101,7 @@
                 </button>
 
                 <template v-if="selectedKas">
-                    <button v-if="activeTab==='students' && selectedKas.model_type===1" @click="openCreateStudentModal"
+                    <button v-if="activeTab==='students'" @click="openCreateStudentModal"
                             class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-sm flex items-center gap-2">
                         <i class="fa-solid fa-user-plus"></i> Tambah Siswa
                     </button>
@@ -139,7 +140,7 @@
     </header>
 
     <!-- ══════════════ MAIN ══════════════ -->
-    <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-1">
+    <main class="no-print max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-1">
 
         <!-- ══════════════ MENU UTAMA: DAFTAR KAS ══════════════ -->
         <div v-if="!selectedKas">
@@ -186,7 +187,7 @@
                                 <span class="font-bold text-slate-900 text-base">{{ kas.name }}</span>
                                 <span class="text-[10px] font-bold px-2 py-0.5 rounded-full"
                                       :class="kas.model_type === 1 ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'">
-                                    {{ kas.model_type === 1 ? 'Model 1 — Kas + Ikrom + Halaqoh' : 'Model 2 — Kas Standar' }}
+                                    {{ kas.model_type === 1 ? 'Model 1 — Kas + Ikrom + Halaqoh' : 'Model 2 — Kas Standar + Siswa' }}
                                 </span>
                             </div>
                             <p class="text-xs text-slate-400 mt-0.5">
@@ -223,7 +224,7 @@
         <div v-if="selectedKas" class="space-y-6">
 
         <!-- ── Dashboard Cards ── -->
-        <section class="no-print grid grid-cols-1 md:grid-cols-3 gap-4">
+        <section class="no-print grid gap-4" :class="selectedKas.model_type === 1 ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-1'">
             <!-- Kas -->
             <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-all relative overflow-hidden">
                 <div class="flex items-center justify-between mb-3">
@@ -242,8 +243,8 @@
                 </div>
             </div>
 
-            <!-- Ikrom -->
-            <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-all relative overflow-hidden">
+            <!-- Ikrom (Hanya Model 1) -->
+            <div v-if="selectedKas.model_type === 1" class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-all relative overflow-hidden">
                 <div class="flex items-center justify-between mb-3">
                     <span class="text-xs font-bold uppercase tracking-wider text-blue-700 bg-blue-100/70 px-2.5 py-1 rounded-md">
                         <i class="fa-solid fa-hand-holding-heart mr-1"></i> Dana Ikrom
@@ -260,8 +261,8 @@
                 </div>
             </div>
 
-            <!-- Grand Total -->
-            <div class="bg-gradient-to-br from-purple-900 to-indigo-900 text-white rounded-2xl p-5 shadow-md relative overflow-hidden">
+            <!-- Grand Total (Hanya Model 1) -->
+            <div v-if="selectedKas.model_type === 1" class="bg-gradient-to-br from-purple-900 to-indigo-900 text-white rounded-2xl p-5 shadow-md relative overflow-hidden">
                 <div class="flex items-center justify-between mb-3">
                     <span class="text-xs font-bold uppercase tracking-wider text-purple-200 bg-white/10 px-2.5 py-1 rounded-md">
                         <i class="fa-solid fa-vault mr-1"></i> Grand Total
@@ -299,7 +300,7 @@
                             <span class="text-slate-400">s/d</span>
                             <input type="date" v-model="filters.endDate" @change="refreshAll" class="bg-transparent text-slate-800 focus:outline-none font-medium">
                         </div>
-                        <select v-model="filters.pos" @change="fetchTransactions" class="text-xs bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg font-semibold text-slate-700 focus:outline-none">
+                        <select v-if="selectedKas.model_type === 1" v-model="filters.pos" @change="fetchTransactions" class="text-xs bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg font-semibold text-slate-700 focus:outline-none">
                             <option value="all">Semua Pos (Kas & Ikrom)</option>
                             <option value="kas">💼 Kas Utama</option>
                             <option value="ikrom">🤲 Dana Ikrom</option>
@@ -322,23 +323,28 @@
                     <table class="kas-table w-full text-left border-collapse text-xs">
                         <thead>
                             <tr class="bg-slate-100/80 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
-                                <th rowspan="2" class="py-3 px-3 text-center border-r border-slate-200 w-10">No</th>
-                                <th rowspan="2" class="py-3 px-3 border-r border-slate-200 w-24">Tanggal</th>
-                                <th rowspan="2" class="py-3 px-3 border-r border-slate-200 w-28">Halaqoh</th>
-                                <th rowspan="2" class="py-3 px-4 border-r border-slate-200 min-w-[160px]">Nama Siswa / Pihak</th>
-                                <th rowspan="2" class="py-3 px-4 border-r border-slate-200 min-w-[200px]">Uraian / Keterangan</th>
-                                <th colspan="3" class="py-2 px-2 text-center border-r border-emerald-200 pos-kas-header">
+                                <th :rowspan="selectedKas.model_type === 1 ? 2 : 1" class="py-3 px-3 text-center border-r border-slate-200 w-10">No</th>
+                                <th :rowspan="selectedKas.model_type === 1 ? 2 : 1" class="py-3 px-3 border-r border-slate-200 w-24">Tanggal</th>
+                                <th v-if="selectedKas.model_type === 1" :rowspan="selectedKas.model_type === 1 ? 2 : 1" class="py-3 px-3 border-r border-slate-200 w-28">Halaqoh</th>
+                                <th :rowspan="selectedKas.model_type === 1 ? 2 : 1" class="py-3 px-4 border-r border-slate-200 min-w-[160px]">Nama Siswa / Pihak</th>
+                                <th :rowspan="selectedKas.model_type === 1 ? 2 : 1" class="py-3 px-4 border-r border-slate-200 min-w-[200px]">Uraian / Keterangan</th>
+                                <th v-if="selectedKas.model_type === 1" colspan="3" class="py-2 px-2 text-center border-r border-emerald-200 pos-kas-header">
                                     <i class="fa-solid fa-wallet mr-1"></i> KAS
                                 </th>
-                                <th colspan="3" class="py-2 px-2 text-center border-r border-blue-200 pos-ikrom-header">
+                                <template v-else>
+                                    <th class="py-3 px-3 text-right border-r border-emerald-100 bg-emerald-50/50 text-emerald-800">Kas Masuk</th>
+                                    <th class="py-3 px-3 text-right border-r border-emerald-100 bg-emerald-50/50 text-red-700">Kas Keluar</th>
+                                    <th class="py-3 px-3 text-right border-r border-emerald-200 bg-emerald-100/40 font-bold">Saldo Kas</th>
+                                </template>
+                                <th v-if="selectedKas.model_type === 1" colspan="3" class="py-2 px-2 text-center border-r border-blue-200 pos-ikrom-header">
                                     <i class="fa-solid fa-hand-holding-heart mr-1"></i> IKROM
                                 </th>
-                                <th rowspan="2" class="py-3 px-4 text-center border-r border-purple-200 pos-total-header">
+                                <th v-if="selectedKas.model_type === 1" rowspan="2" class="py-3 px-4 text-center border-r border-purple-200 pos-total-header">
                                     <i class="fa-solid fa-vault mr-1"></i> TOTAL SALDO
                                 </th>
-                                <th rowspan="2" class="py-3 px-3 text-center no-print w-20">Aksi</th>
+                                <th :rowspan="selectedKas.model_type === 1 ? 2 : 1" class="py-3 px-3 text-center no-print w-20">Aksi</th>
                             </tr>
-                            <tr class="bg-slate-50 border-b border-slate-200 text-[10px] text-slate-600">
+                            <tr v-if="selectedKas.model_type === 1" class="bg-slate-50 border-b border-slate-200 text-[10px] text-slate-600">
                                 <th class="py-2 px-3 text-right border-r border-emerald-100 bg-emerald-50/50 text-emerald-800">Masuk</th>
                                 <th class="py-2 px-3 text-right border-r border-emerald-100 bg-emerald-50/50 text-red-700">Keluar</th>
                                 <th class="py-2 px-3 text-right border-r border-emerald-200 bg-emerald-100/40 font-bold">Saldo Kas</th>
@@ -349,13 +355,13 @@
                         </thead>
                         <tbody class="divide-y divide-slate-100">
                             <tr v-if="loading">
-                                <td colspan="13" class="py-12 text-center text-slate-400">
+                                <td :colspan="selectedKas.model_type === 1 ? 13 : 8" class="py-12 text-center text-slate-400">
                                     <i class="fa-solid fa-circle-notch fa-spin text-2xl text-emerald-600"></i>
                                     <p class="text-sm mt-2">Memuat data...</p>
                                 </td>
                             </tr>
                             <tr v-else-if="transactions.length === 0">
-                                <td colspan="13" class="py-12 text-center text-slate-400">
+                                <td :colspan="selectedKas.model_type === 1 ? 13 : 8" class="py-12 text-center text-slate-400">
                                     <i class="fa-regular fa-folder-open text-3xl text-slate-300"></i>
                                     <p class="text-sm font-medium text-slate-600 mt-2">Tidak ada data transaksi</p>
                                     <button @click="openCreateModal" class="mt-2 text-xs font-semibold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg hover:bg-emerald-100">
@@ -363,51 +369,91 @@
                                     </button>
                                 </td>
                             </tr>
-                            <tr v-for="(t, idx) in transactions" :key="t.id" class="hover:bg-slate-50/80 transition-colors">
-                                <td class="py-2.5 px-3 text-center border-r border-slate-100 text-slate-500">{{ idx+1 }}</td>
-                                <td class="py-2.5 px-3 border-r border-slate-100 font-medium text-slate-700 whitespace-nowrap">{{ formatDate(t.date) }}</td>
-                                <td class="py-2.5 px-3 border-r border-slate-100 text-slate-500 font-mono text-[11px]">{{ t.ref_no || '-' }}</td>
-                                <td class="py-2.5 px-4 border-r border-slate-100 font-semibold text-slate-900 max-w-[180px] truncate">
-                                    <span class="inline-flex items-center gap-1.5 cursor-pointer hover:text-emerald-600 transition-colors"
-                                          @click="t.name ? filterByStudent(t.name) : null" :title="t.name">
-                                        <i class="fa-solid fa-user-graduate text-slate-400 text-[11px]"></i>
-                                        {{ t.name || '-' }}
-                                    </span>
-                                </td>
-                                <td class="py-2.5 px-4 border-r border-slate-100 text-slate-700 max-w-sm truncate" :title="t.description">{{ t.description }}</td>
-                                <td class="py-2.5 px-3 text-right border-r border-emerald-50 font-medium" :class="t.kas_in>0 ? 'text-emerald-600 bg-emerald-50/20' : 'text-slate-300'">{{ t.kas_in>0 ? formatRupiah(t.kas_in) : '-' }}</td>
-                                <td class="py-2.5 px-3 text-right border-r border-emerald-50 font-medium" :class="t.kas_out>0 ? 'text-red-500 bg-red-50/20' : 'text-slate-300'">{{ t.kas_out>0 ? formatRupiah(t.kas_out) : '-' }}</td>
-                                <td class="py-2.5 px-3 text-right border-r border-slate-200 font-bold text-slate-800 bg-emerald-50/30">{{ formatRupiah(t.kas_balance) }}</td>
-                                <td class="py-2.5 px-3 text-right border-r border-blue-50 font-medium" :class="t.ikrom_in>0 ? 'text-blue-600 bg-blue-50/20' : 'text-slate-300'">{{ t.ikrom_in>0 ? formatRupiah(t.ikrom_in) : '-' }}</td>
-                                <td class="py-2.5 px-3 text-right border-r border-blue-50 font-medium" :class="t.ikrom_out>0 ? 'text-red-500 bg-red-50/20' : 'text-slate-300'">{{ t.ikrom_out>0 ? formatRupiah(t.ikrom_out) : '-' }}</td>
-                                <td class="py-2.5 px-3 text-right border-r border-slate-200 font-bold text-slate-800 bg-blue-50/30">{{ formatRupiah(t.ikrom_balance) }}</td>
-                                <td class="py-2.5 px-4 text-right border-r border-slate-200 font-extrabold text-purple-900 bg-purple-50/40">{{ formatRupiah(t.total_balance) }}</td>
-                                <td class="py-2.5 px-2 text-center no-print">
-                                    <div class="flex items-center justify-center space-x-1">
-                                        <button @click="openEditModal(t)" class="text-slate-400 hover:text-blue-600 p-1 rounded hover:bg-blue-50" title="Edit">
-                                            <i class="fa-regular fa-pen-to-square"></i>
-                                        </button>
-                                        <button @click="deleteTransaction(t.id, t.description)" class="text-slate-400 hover:text-red-600 p-1 rounded hover:bg-red-50" title="Hapus">
-                                            <i class="fa-regular fa-trash-can"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
+                            <template v-else>
+                                <tr v-for="(t, idx) in paginatedTransactions" :key="t.id" class="hover:bg-slate-50/80 transition-colors">
+                                    <td class="py-2.5 px-3 text-center border-r border-slate-100 text-slate-500">
+                                        {{ txPerPage === 'all' ? (idx + 1) : ((txCurrentPage - 1) * Number(txPerPage) + idx + 1) }}
+                                    </td>
+                                    <td class="py-2.5 px-3 border-r border-slate-100 font-medium text-slate-700 whitespace-nowrap">{{ formatDate(t.date) }}</td>
+                                    <td v-if="selectedKas.model_type === 1" class="py-2.5 px-3 border-r border-slate-100 text-slate-500 font-mono text-[11px]">{{ t.ref_no || '-' }}</td>
+                                    <td class="py-2.5 px-4 border-r border-slate-100 font-semibold text-slate-900 max-w-[180px] truncate">
+                                        <span class="inline-flex items-center gap-1.5 cursor-pointer hover:text-emerald-600 transition-colors"
+                                              @click="t.name ? filterByStudent(t.name) : null" :title="t.name">
+                                            <i class="fa-solid fa-user-graduate text-slate-400 text-[11px]"></i>
+                                            {{ t.name || '-' }}
+                                        </span>
+                                    </td>
+                                    <td class="py-2.5 px-4 border-r border-slate-100 text-slate-700 max-w-sm truncate" :title="t.description">{{ t.description }}</td>
+                                    <td class="py-2.5 px-3 text-right border-r border-emerald-50 font-medium" :class="t.kas_in>0 ? 'text-emerald-600 bg-emerald-50/20' : 'text-slate-300'">{{ t.kas_in>0 ? formatRupiah(t.kas_in) : '-' }}</td>
+                                    <td class="py-2.5 px-3 text-right border-r border-emerald-50 font-medium" :class="t.kas_out>0 ? 'text-red-500 bg-red-50/20' : 'text-slate-300'">{{ t.kas_out>0 ? formatRupiah(t.kas_out) : '-' }}</td>
+                                    <td class="py-2.5 px-3 text-right border-r border-slate-200 font-bold text-slate-800 bg-emerald-50/30">{{ formatRupiah(t.kas_balance) }}</td>
+                                    <td v-if="selectedKas.model_type === 1" class="py-2.5 px-3 text-right border-r border-blue-50 font-medium" :class="t.ikrom_in>0 ? 'text-blue-600 bg-blue-50/20' : 'text-slate-300'">{{ t.ikrom_in>0 ? formatRupiah(t.ikrom_in) : '-' }}</td>
+                                    <td v-if="selectedKas.model_type === 1" class="py-2.5 px-3 text-right border-r border-blue-50 font-medium" :class="t.ikrom_out>0 ? 'text-red-500 bg-red-50/20' : 'text-slate-300'">{{ t.ikrom_out>0 ? formatRupiah(t.ikrom_out) : '-' }}</td>
+                                    <td v-if="selectedKas.model_type === 1" class="py-2.5 px-3 text-right border-r border-slate-200 font-bold text-slate-800 bg-blue-50/30">{{ formatRupiah(t.ikrom_balance) }}</td>
+                                    <td v-if="selectedKas.model_type === 1" class="py-2.5 px-4 text-right border-r border-slate-200 font-extrabold text-purple-900 bg-purple-50/40">{{ formatRupiah(t.total_balance) }}</td>
+                                    <td class="py-2.5 px-2 text-center no-print">
+                                        <div class="flex items-center justify-center space-x-1">
+                                            <button @click="openEditModal(t)" class="text-slate-400 hover:text-blue-600 p-1 rounded hover:bg-blue-50" title="Edit">
+                                                <i class="fa-regular fa-pen-to-square"></i>
+                                            </button>
+                                            <button @click="deleteTransaction(t.id, t.description)" class="text-slate-400 hover:text-red-600 p-1 rounded hover:bg-red-50" title="Hapus">
+                                                <i class="fa-regular fa-trash-can"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
                         </tbody>
                         <tfoot v-if="transactions.length > 0" class="bg-slate-100 border-t-2 border-slate-300 font-bold text-slate-800">
                             <tr>
-                                <td colspan="5" class="py-3 px-4 text-right text-[11px] uppercase tracking-wider border-r border-slate-200">Total Mutasi:</td>
+                                <td :colspan="selectedKas.model_type === 1 ? 5 : 4" class="py-3 px-4 text-right text-[11px] uppercase tracking-wider border-r border-slate-200">Total Mutasi:</td>
                                 <td class="py-3 px-3 text-right border-r border-emerald-200 text-emerald-700">{{ formatRupiah(tableTotals.kasIn) }}</td>
                                 <td class="py-3 px-3 text-right border-r border-emerald-200 text-red-600">{{ formatRupiah(tableTotals.kasOut) }}</td>
                                 <td class="py-3 px-3 text-right border-r border-slate-300 bg-emerald-100/60 text-emerald-900">{{ formatRupiah(tableTotals.finalKasBalance) }}</td>
-                                <td class="py-3 px-3 text-right border-r border-blue-200 text-blue-700">{{ formatRupiah(tableTotals.ikromIn) }}</td>
-                                <td class="py-3 px-3 text-right border-r border-blue-200 text-red-600">{{ formatRupiah(tableTotals.ikromOut) }}</td>
-                                <td class="py-3 px-3 text-right border-r border-slate-300 bg-blue-100/60 text-blue-900">{{ formatRupiah(tableTotals.finalIkromBalance) }}</td>
-                                <td class="py-3 px-4 text-right bg-purple-100 text-purple-950 text-sm font-extrabold border-r">{{ formatRupiah(tableTotals.finalTotalBalance) }}</td>
+                                <td v-if="selectedKas.model_type === 1" class="py-3 px-3 text-right border-r border-blue-200 text-blue-700">{{ formatRupiah(tableTotals.ikromIn) }}</td>
+                                <td v-if="selectedKas.model_type === 1" class="py-3 px-3 text-right border-r border-blue-200 text-red-600">{{ formatRupiah(tableTotals.ikromOut) }}</td>
+                                <td v-if="selectedKas.model_type === 1" class="py-3 px-3 text-right border-r border-slate-300 bg-blue-100/60 text-blue-900">{{ formatRupiah(tableTotals.finalIkromBalance) }}</td>
+                                <td v-if="selectedKas.model_type === 1" class="py-3 px-4 text-right bg-purple-100 text-purple-950 text-sm font-extrabold border-r">{{ formatRupiah(tableTotals.finalTotalBalance) }}</td>
                                 <td class="no-print"></td>
                             </tr>
                         </tfoot>
                     </table>
+                </div>
+                <!-- Pagination Footer for Transactions -->
+                <div v-if="transactions.length > 0" class="no-print px-4 py-3 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-2">
+                            <span class="font-medium text-slate-500">Tampilkan:</span>
+                            <select v-model="txPerPage" class="bg-white border border-slate-200 rounded-lg px-2.5 py-1 font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                                <option :value="20">20 baris</option>
+                                <option :value="30">30 baris</option>
+                                <option :value="50">50 baris</option>
+                                <option value="all">Semua baris</option>
+                            </select>
+                        </div>
+                        <span class="text-slate-400">|</span>
+                        <div>
+                            Menampilkan <span class="font-bold text-slate-800">{{ txStartItem }}</span> - <span class="font-bold text-slate-800">{{ txEndItem }}</span> dari <span class="font-bold text-slate-800">{{ transactions.length }}</span> data
+                        </div>
+                    </div>
+                    <div v-if="txPerPage !== 'all' && totalTxPages > 1" class="flex items-center gap-1">
+                        <button @click="txCurrentPage = Math.max(1, txCurrentPage - 1)" :disabled="txCurrentPage === 1"
+                                class="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium">
+                            <i class="fa-solid fa-chevron-left mr-1"></i> Prev
+                        </button>
+                        <template v-for="(p, pIdx) in getPageNumbers(txCurrentPage, totalTxPages)" :key="pIdx">
+                            <span v-if="p === '...'" class="px-2 py-1 text-slate-400">...</span>
+                            <button v-else @click="txCurrentPage = p"
+                                    :class="txCurrentPage === p ? 'bg-emerald-600 text-white font-bold border-emerald-600' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'"
+                                    class="px-3 py-1 rounded-lg border transition-colors font-medium">
+                                {{ p }}
+                            </button>
+                        </template>
+                        <button @click="txCurrentPage = Math.min(totalTxPages, txCurrentPage + 1)" :disabled="txCurrentPage === totalTxPages"
+                                class="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium">
+                            Next <i class="fa-solid fa-chevron-right ml-1"></i>
+                        </button>
+                    </div>
                 </div>
             </section>
         </div>
@@ -447,19 +493,19 @@
                             <tr class="bg-slate-100/80 border-b border-slate-200 text-slate-600 font-bold text-xs uppercase tracking-wider">
                                 <th class="py-3 px-4 border-r border-slate-200 w-12 text-center">No</th>
                                 <th class="py-3 px-5 border-r border-slate-200">Nama Lengkap Siswa</th>
-                                <th class="py-3 px-5 border-r border-slate-200">Halaqoh</th>
+                                <th v-if="selectedKas && selectedKas.model_type === 1" class="py-3 px-5 border-r border-slate-200">Halaqoh</th>
                                 <th class="py-3 px-4 text-center w-36">Aksi</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
                             <tr v-if="studentLoading">
-                                <td colspan="4" class="py-12 text-center text-slate-400">
+                                <td :colspan="selectedKas && selectedKas.model_type === 1 ? 4 : 3" class="py-12 text-center text-slate-400">
                                     <i class="fa-solid fa-circle-notch fa-spin text-2xl text-indigo-500"></i>
                                     <p class="text-sm mt-2">Memuat data siswa...</p>
                                 </td>
                             </tr>
                             <tr v-else-if="students.length === 0">
-                                <td colspan="4" class="py-12 text-center text-slate-400">
+                                <td :colspan="selectedKas && selectedKas.model_type === 1 ? 4 : 3" class="py-12 text-center text-slate-400">
                                     <i class="fa-solid fa-graduation-cap text-3xl text-slate-300"></i>
                                     <p class="text-sm font-medium text-slate-600 mt-2">Belum ada data siswa</p>
                                     <button @click="openCreateStudentModal" class="mt-2 text-xs font-semibold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100">
@@ -467,54 +513,94 @@
                                     </button>
                                 </td>
                             </tr>
-                            <tr v-for="(s, idx) in students" :key="s.id" class="hover:bg-slate-50/80 transition-colors">
-                                <td class="py-3 px-4 text-center border-r border-slate-100 text-slate-500 text-sm font-medium">{{ idx + 1 }}</td>
-                                <td class="py-3 px-5 border-r border-slate-100">
-                                    <div class="flex items-center gap-2.5">
-                                        <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
-                                            {{ s.name.charAt(0).toUpperCase() }}
+                            <template v-else>
+                                <tr v-for="(s, idx) in paginatedStudents" :key="s.id" class="hover:bg-slate-50/80 transition-colors">
+                                    <td class="py-3 px-4 text-center border-r border-slate-100 text-slate-500 text-sm font-medium">
+                                        {{ studentPerPage === 'all' ? (idx + 1) : ((studentCurrentPage - 1) * Number(studentPerPage) + idx + 1) }}
+                                    </td>
+                                    <td class="py-3 px-5 border-r border-slate-100">
+                                        <div class="flex items-center gap-2.5">
+                                            <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                                                {{ s.name.charAt(0).toUpperCase() }}
+                                            </div>
+                                            <span class="font-semibold text-slate-900">{{ s.name }}</span>
                                         </div>
-                                        <span class="font-semibold text-slate-900">{{ s.name }}</span>
-                                    </div>
-                                </td>
-                                <td class="py-3 px-5 border-r border-slate-100 text-slate-600">
-                                    {{ s.halaqoh || '-' }}
-                                </td>
-                                <td class="py-3 px-4 text-center">
-                                    <div class="flex items-center justify-center space-x-2">
-                                        <button @click="filterByStudent(s.name)"
-                                                class="text-slate-400 hover:text-emerald-600 p-1.5 rounded hover:bg-emerald-50 transition-colors"
-                                                title="Lihat Riwayat Transaksi">
-                                            <i class="fa-solid fa-receipt text-sm"></i>
-                                        </button>
-                                        <button @click="openEditStudentModal(s)"
-                                                class="text-slate-400 hover:text-blue-600 p-1.5 rounded hover:bg-blue-50 transition-colors"
-                                                title="Edit Siswa">
-                                            <i class="fa-regular fa-pen-to-square text-sm"></i>
-                                        </button>
-                                        <button @click="deleteStudent(s.id, s.name)"
-                                                class="text-slate-400 hover:text-red-600 p-1.5 rounded hover:bg-red-50 transition-colors"
-                                                title="Hapus Siswa">
-                                            <i class="fa-regular fa-trash-can text-sm"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
+                                    </td>
+                                    <td v-if="selectedKas && selectedKas.model_type === 1" class="py-3 px-5 border-r border-slate-100 text-slate-600">
+                                        {{ s.halaqoh || '-' }}
+                                    </td>
+                                    <td class="py-3 px-4 text-center">
+                                        <div class="flex items-center justify-center space-x-2">
+                                            <button @click="filterByStudent(s.name)"
+                                                    class="text-slate-400 hover:text-emerald-600 p-1.5 rounded hover:bg-emerald-50 transition-colors"
+                                                    title="Lihat Riwayat Transaksi">
+                                                <i class="fa-solid fa-receipt text-sm"></i>
+                                            </button>
+                                            <button @click="openEditStudentModal(s)"
+                                                    class="text-slate-400 hover:text-blue-600 p-1.5 rounded hover:bg-blue-50 transition-colors"
+                                                    title="Edit Siswa">
+                                                <i class="fa-regular fa-pen-to-square text-sm"></i>
+                                            </button>
+                                            <button @click="deleteStudent(s.id, s.name)"
+                                                    class="text-slate-400 hover:text-red-600 p-1.5 rounded hover:bg-red-50 transition-colors"
+                                                    title="Hapus Siswa">
+                                                <i class="fa-regular fa-trash-can text-sm"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
                         </tbody>
                     </table>
+                </div>
+                <!-- Pagination Footer for Master Data Siswa -->
+                <div v-if="students.length > 0" class="no-print px-4 py-3 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-2">
+                            <span class="font-medium text-slate-500">Tampilkan:</span>
+                            <select v-model="studentPerPage" class="bg-white border border-slate-200 rounded-lg px-2.5 py-1 font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option :value="20">20 baris</option>
+                                <option :value="30">30 baris</option>
+                                <option :value="50">50 baris</option>
+                                <option value="all">Semua baris</option>
+                            </select>
+                        </div>
+                        <span class="text-slate-400">|</span>
+                        <div>
+                            Menampilkan <span class="font-bold text-slate-800">{{ studentStartItem }}</span> - <span class="font-bold text-slate-800">{{ studentEndItem }}</span> dari <span class="font-bold text-slate-800">{{ students.length }}</span> data
+                        </div>
+                    </div>
+                    <div v-if="studentPerPage !== 'all' && totalStudentPages > 1" class="flex items-center gap-1">
+                        <button @click="studentCurrentPage = Math.max(1, studentCurrentPage - 1)" :disabled="studentCurrentPage === 1"
+                                class="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium">
+                            <i class="fa-solid fa-chevron-left mr-1"></i> Prev
+                        </button>
+                        <template v-for="(p, pIdx) in getPageNumbers(studentCurrentPage, totalStudentPages)" :key="pIdx">
+                            <span v-if="p === '...'" class="px-2 py-1 text-slate-400">...</span>
+                            <button v-else @click="studentCurrentPage = p"
+                                    :class="studentCurrentPage === p ? 'bg-indigo-600 text-white font-bold border-indigo-600' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'"
+                                    class="px-3 py-1 rounded-lg border transition-colors font-medium">
+                                {{ p }}
+                            </button>
+                        </template>
+                        <button @click="studentCurrentPage = Math.min(totalStudentPages, studentCurrentPage + 1)" :disabled="studentCurrentPage === totalStudentPages"
+                                class="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium">
+                            Next <i class="fa-solid fa-chevron-right ml-1"></i>
+                        </button>
+                    </div>
                 </div>
             </section>
         </div>
 
         <!-- ══════════════ TAB 3: GRAFIK ══════════════ -->
         <div v-show="activeTab==='charts'" class="no-print space-y-6">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="lg:col-span-2 bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs">
+            <div class="grid gap-6" :class="selectedKas.model_type === 1 ? 'grid-cols-1 lg:grid-cols-3' : 'grid-cols-1'">
+                <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs" :class="selectedKas.model_type === 1 ? 'lg:col-span-2' : ''">
                     <h3 class="font-bold text-slate-900 mb-1">Pemasukan vs Pengeluaran per Bulan</h3>
-                    <p class="text-xs text-slate-500 mb-4">Kas Utama & Dana Ikrom</p>
+                    <p class="text-xs text-slate-500 mb-4">{{ selectedKas.model_type === 1 ? 'Kas Utama & Dana Ikrom' : 'Kas Utama' }}</p>
                     <div class="h-80"><canvas id="monthlyChart"></canvas></div>
                 </div>
-                <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs">
+                <div v-if="selectedKas.model_type === 1" class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs">
                     <h3 class="font-bold text-slate-900 mb-1">Komposisi Saldo</h3>
                     <p class="text-xs text-slate-500 mb-4">Distribusi Kas vs Ikrom</p>
                     <div class="h-80 flex items-center"><canvas id="posChart"></canvas></div>
@@ -593,9 +679,9 @@
                             <div>
                                 <div class="font-bold text-slate-800 text-sm flex items-center gap-2">
                                     Model 2
-                                    <span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-bold">Kas Standar</span>
+                                    <span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-bold">Kas Standar + Master Siswa</span>
                                 </div>
-                                <p class="text-xs text-slate-500 mt-0.5">Hanya kolom Kas masuk dan keluar, tanpa Ikrom dan Halaqoh. Cocok untuk kas umum/sederhana.</p>
+                                <p class="text-xs text-slate-500 mt-0.5">Kolom Kas masuk dan keluar dengan Master Data Siswa, tanpa pos Dana Ikrom.</p>
                             </div>
                         </label>
                     </div>
@@ -631,7 +717,7 @@
             <form @submit.prevent="saveTransaction" class="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
 
                 <!-- Tanggal & Halaqoh -->
-                <div class="grid grid-cols-2 gap-4">
+                <div :class="selectedKas && selectedKas.model_type === 1 ? 'grid grid-cols-2 gap-4' : ''">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">
                             <i class="fa-regular fa-calendar text-emerald-600 mr-1"></i> Tanggal <span class="text-red-500">*</span>
@@ -639,7 +725,7 @@
                         <input type="date" v-model="form.date" required
                                class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none font-medium">
                     </div>
-                    <div>
+                    <div v-if="selectedKas && selectedKas.model_type === 1">
                         <label class="block text-xs font-bold text-slate-700 mb-1">
                             <i class="fa-solid fa-receipt text-emerald-600 mr-1"></i> Halaqoh
                         </label>
@@ -717,11 +803,11 @@
                 </div>
 
                 <!-- Nominal Kas & Ikrom -->
-                <div class="grid grid-cols-2 gap-3">
+                <div :class="selectedKas.model_type === 1 ? 'grid grid-cols-2 gap-3' : 'space-y-3'">
                     <div class="p-3.5 bg-emerald-50/70 rounded-xl border-2 border-emerald-200/80 space-y-1.5">
                         <div class="flex items-center justify-between">
                             <label class="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
-                                <i class="fa-solid fa-wallet text-emerald-600"></i> Kas (Rp)
+                                <i class="fa-solid fa-wallet text-emerald-600"></i> Nominal Kas (Rp) <span class="text-red-500">*</span>
                             </label>
                             <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-md"
                                   :class="form.type==='in' ? 'bg-emerald-200 text-emerald-800' : 'bg-red-200 text-red-800'">
@@ -730,11 +816,11 @@
                         </div>
                         <div class="relative">
                             <span class="absolute left-3 top-2 text-xs font-bold text-emerald-700">Rp</span>
-                            <input type="text" :value="form.kas_formatted" @input="onKasInput($event)" placeholder="0"
+                            <input type="text" :value="form.kas_formatted" @input="onKasInput($event)" placeholder="0" required
                                    class="w-full bg-white border border-emerald-300 rounded-lg pl-9 pr-3 py-2 text-sm font-bold text-emerald-950 focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                         </div>
                     </div>
-                    <div class="p-3.5 bg-blue-50/70 rounded-xl border-2 border-blue-200/80 space-y-1.5">
+                    <div v-if="selectedKas.model_type === 1" class="p-3.5 bg-blue-50/70 rounded-xl border-2 border-blue-200/80 space-y-1.5">
                         <div class="flex items-center justify-between">
                             <label class="text-xs font-bold text-blue-900 flex items-center gap-1.5">
                                 <i class="fa-solid fa-hand-holding-heart text-blue-600"></i> Ikrom (Rp)
@@ -752,8 +838,8 @@
                     </div>
                 </div>
 
-                <!-- Total -->
-                <div class="p-4 bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-200 rounded-xl flex items-center justify-between">
+                <!-- Total (Hanya jika Model 1) -->
+                <div v-if="selectedKas.model_type === 1" class="p-4 bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-200 rounded-xl flex items-center justify-between">
                     <div class="flex items-center space-x-2.5">
                         <div class="w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center">
                             <i class="fa-solid fa-calculator text-sm"></i>
@@ -807,7 +893,7 @@
                 </div>
 
                 <!-- Halaqoh -->
-                <div>
+                <div v-if="selectedKas && selectedKas.model_type === 1">
                     <label class="block text-sm font-bold text-slate-700 mb-1.5">
                         <i class="fa-solid fa-users text-indigo-500 mr-1"></i>
                         Halaqoh
@@ -866,7 +952,7 @@
     </div>
 
     <!-- ══════════════ PRINT SECTION ══════════════ -->
-    <div id="print-section" class="print-only">
+    <div v-if="selectedKas" id="print-section" class="print-only">
         <div style="text-align:center; border-bottom:2px solid #000; padding-bottom:8px; margin-bottom:12px;">
             <h2 style="font-size:16pt; font-weight:bold; margin:0; text-transform:uppercase;">{{ reportSettings.orgName }}</h2>
             <p style="font-size:10pt; margin:2px 0 0 0;">{{ reportSettings.address }}</p>
@@ -884,49 +970,52 @@
                 </tr>
             </thead>
             <tbody>
-                <tr><td><b>1. Kas</b></td><td style="text-align:right;">{{ formatRupiah(summary.total_kas_in) }}</td><td style="text-align:right;">{{ formatRupiah(summary.total_kas_out) }}</td><td style="text-align:right;font-weight:bold;">{{ formatRupiah(summary.saldo_kas) }}</td></tr>
-                <tr><td><b>2. Ikrom</b></td><td style="text-align:right;">{{ formatRupiah(summary.total_ikrom_in) }}</td><td style="text-align:right;">{{ formatRupiah(summary.total_ikrom_out) }}</td><td style="text-align:right;font-weight:bold;">{{ formatRupiah(summary.saldo_ikrom) }}</td></tr>
-                <tr style="background:#f8fafc;font-weight:bold;"><td>GRAND TOTAL</td><td style="text-align:right;">{{ formatRupiah(summary.total_masuk) }}</td><td style="text-align:right;">{{ formatRupiah(summary.total_keluar) }}</td><td style="text-align:right;">{{ formatRupiah(summary.total_saldo) }}</td></tr>
+                <tr><td><b>{{ selectedKas.model_type === 1 ? '1. Kas' : 'Kas Utama' }}</b></td><td style="text-align:right;">{{ formatRupiah(summary.total_kas_in) }}</td><td style="text-align:right;">{{ formatRupiah(summary.total_kas_out) }}</td><td style="text-align:right;font-weight:bold;">{{ formatRupiah(summary.saldo_kas) }}</td></tr>
+                <tr v-if="selectedKas.model_type === 1"><td><b>2. Ikrom</b></td><td style="text-align:right;">{{ formatRupiah(summary.total_ikrom_in) }}</td><td style="text-align:right;">{{ formatRupiah(summary.total_ikrom_out) }}</td><td style="text-align:right;font-weight:bold;">{{ formatRupiah(summary.saldo_ikrom) }}</td></tr>
+                <tr v-if="selectedKas.model_type === 1" style="background:#f8fafc;font-weight:bold;"><td>GRAND TOTAL</td><td style="text-align:right;">{{ formatRupiah(summary.total_masuk) }}</td><td style="text-align:right;">{{ formatRupiah(summary.total_keluar) }}</td><td style="text-align:right;">{{ formatRupiah(summary.total_saldo) }}</td></tr>
             </tbody>
         </table>
         <!-- Detail transactions -->
         <table class="print-table" style="width:100%; font-size:8.5pt;">
             <thead>
                 <tr style="background:#f1f5f9;">
-                    <th rowspan="2">No</th><th rowspan="2">Tanggal</th><th rowspan="2">Halaqoh</th>
-                    <th rowspan="2" style="text-align:left;">Nama</th><th rowspan="2" style="text-align:left;">Keterangan</th>
-                    <th colspan="3">KAS</th>
-                    <th colspan="3">IKROM</th>
-                    <th rowspan="2">TOTAL SALDO</th>
+                    <th :rowspan="selectedKas.model_type === 1 ? 2 : 1">No</th><th :rowspan="selectedKas.model_type === 1 ? 2 : 1">Tanggal</th><th v-if="selectedKas.model_type === 1" :rowspan="selectedKas.model_type === 1 ? 2 : 1">Halaqoh</th>
+                    <th :rowspan="selectedKas.model_type === 1 ? 2 : 1" style="text-align:left;">Nama</th><th :rowspan="selectedKas.model_type === 1 ? 2 : 1" style="text-align:left;">Keterangan</th>
+                    <th v-if="selectedKas.model_type === 1" colspan="3">KAS</th>
+                    <template v-else>
+                        <th>Masuk</th><th>Keluar</th><th>Saldo</th>
+                    </template>
+                    <th v-if="selectedKas.model_type === 1" colspan="3">IKROM</th>
+                    <th v-if="selectedKas.model_type === 1" rowspan="2">TOTAL SALDO</th>
                 </tr>
-                <tr style="background:#f8fafc;font-size:8pt;"><th>Masuk</th><th>Keluar</th><th>Saldo</th><th>Masuk</th><th>Keluar</th><th>Saldo</th></tr>
+                <tr v-if="selectedKas.model_type === 1" style="background:#f8fafc;font-size:8pt;"><th>Masuk</th><th>Keluar</th><th>Saldo</th><th>Masuk</th><th>Keluar</th><th>Saldo</th></tr>
             </thead>
             <tbody>
                 <tr v-for="(t,idx) in transactions" :key="'p'+t.id">
                     <td style="text-align:center;">{{ idx+1 }}</td>
                     <td style="text-align:center;">{{ formatDate(t.date) }}</td>
-                    <td style="text-align:center;">{{ t.ref_no||'-' }}</td>
+                    <td v-if="selectedKas.model_type === 1" style="text-align:center;">{{ t.ref_no||'-' }}</td>
                     <td style="font-weight:600;">{{ t.name||'-' }}</td>
                     <td>{{ t.description }}</td>
                     <td style="text-align:right;">{{ t.kas_in>0 ? formatRupiah(t.kas_in) : '-' }}</td>
                     <td style="text-align:right;">{{ t.kas_out>0 ? formatRupiah(t.kas_out) : '-' }}</td>
                     <td style="text-align:right;font-weight:bold;">{{ formatRupiah(t.kas_balance) }}</td>
-                    <td style="text-align:right;">{{ t.ikrom_in>0 ? formatRupiah(t.ikrom_in) : '-' }}</td>
-                    <td style="text-align:right;">{{ t.ikrom_out>0 ? formatRupiah(t.ikrom_out) : '-' }}</td>
-                    <td style="text-align:right;font-weight:bold;">{{ formatRupiah(t.ikrom_balance) }}</td>
-                    <td style="text-align:right;font-weight:bold;">{{ formatRupiah(t.total_balance) }}</td>
+                    <td v-if="selectedKas.model_type === 1" style="text-align:right;">{{ t.ikrom_in>0 ? formatRupiah(t.ikrom_in) : '-' }}</td>
+                    <td v-if="selectedKas.model_type === 1" style="text-align:right;">{{ t.ikrom_out>0 ? formatRupiah(t.ikrom_out) : '-' }}</td>
+                    <td v-if="selectedKas.model_type === 1" style="text-align:right;font-weight:bold;">{{ formatRupiah(t.ikrom_balance) }}</td>
+                    <td v-if="selectedKas.model_type === 1" style="text-align:right;font-weight:bold;">{{ formatRupiah(t.total_balance) }}</td>
                 </tr>
             </tbody>
             <tfoot>
                 <tr style="font-weight:bold;background:#f1f5f9;">
-                    <td colspan="5" style="text-align:right;">TOTAL:</td>
+                    <td :colspan="selectedKas.model_type === 1 ? 5 : 4" style="text-align:right;">TOTAL:</td>
                     <td style="text-align:right;">{{ formatRupiah(tableTotals.kasIn) }}</td>
                     <td style="text-align:right;">{{ formatRupiah(tableTotals.kasOut) }}</td>
                     <td style="text-align:right;">{{ formatRupiah(tableTotals.finalKasBalance) }}</td>
-                    <td style="text-align:right;">{{ formatRupiah(tableTotals.ikromIn) }}</td>
-                    <td style="text-align:right;">{{ formatRupiah(tableTotals.ikromOut) }}</td>
-                    <td style="text-align:right;">{{ formatRupiah(tableTotals.finalIkromBalance) }}</td>
-                    <td style="text-align:right;">{{ formatRupiah(tableTotals.finalTotalBalance) }}</td>
+                    <td v-if="selectedKas.model_type === 1" style="text-align:right;">{{ formatRupiah(tableTotals.ikromIn) }}</td>
+                    <td v-if="selectedKas.model_type === 1" style="text-align:right;">{{ formatRupiah(tableTotals.ikromOut) }}</td>
+                    <td v-if="selectedKas.model_type === 1" style="text-align:right;">{{ formatRupiah(tableTotals.finalIkromBalance) }}</td>
+                    <td v-if="selectedKas.model_type === 1" style="text-align:right;">{{ formatRupiah(tableTotals.finalTotalBalance) }}</td>
                 </tr>
             </tfoot>
         </table>

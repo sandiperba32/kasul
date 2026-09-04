@@ -33,9 +33,118 @@ createApp({
         const isEditingKas = ref(false);
         const editingKasId = ref(null);
 
-        // ─────────── Filters ───────────
+        // ─────────── Filters & Search ───────────
         const filters = reactive({ startDate: '', endDate: '', pos: 'all', periodPreset: 'all' });
         const studentSearch = ref('');
+
+        // ─────────── Pagination ───────────
+        const txPerPage = ref(20);
+        const txCurrentPage = ref(1);
+
+        const paginatedTransactions = computed(() => {
+            if (!transactions.value || transactions.value.length === 0) return [];
+            if (txPerPage.value === 'all' || !txPerPage.value) return transactions.value;
+            const perPage = Number(txPerPage.value);
+            const maxPage = Math.ceil(transactions.value.length / perPage) || 1;
+            const page = Math.min(Math.max(1, txCurrentPage.value), maxPage);
+            const start = (page - 1) * perPage;
+            return transactions.value.slice(start, start + perPage);
+        });
+
+        const totalTxPages = computed(() => {
+            if (txPerPage.value === 'all' || !txPerPage.value || !transactions.value || transactions.value.length === 0) return 1;
+            return Math.ceil(transactions.value.length / Number(txPerPage.value));
+        });
+
+        const txStartItem = computed(() => {
+            if (!transactions.value || transactions.value.length === 0) return 0;
+            if (txPerPage.value === 'all') return 1;
+            const perPage = Number(txPerPage.value);
+            const maxPage = Math.ceil(transactions.value.length / perPage) || 1;
+            const page = Math.min(Math.max(1, txCurrentPage.value), maxPage);
+            return (page - 1) * perPage + 1;
+        });
+
+        const txEndItem = computed(() => {
+            if (!transactions.value || transactions.value.length === 0) return 0;
+            if (txPerPage.value === 'all') return transactions.value.length;
+            const perPage = Number(txPerPage.value);
+            const maxPage = Math.ceil(transactions.value.length / perPage) || 1;
+            const page = Math.min(Math.max(1, txCurrentPage.value), maxPage);
+            return Math.min(page * perPage, transactions.value.length);
+        });
+
+        const studentPerPage = ref(20);
+        const studentCurrentPage = ref(1);
+
+        const paginatedStudents = computed(() => {
+            if (studentPerPage.value === 'all' || !studentPerPage.value) return students.value;
+            const perPage = Number(studentPerPage.value);
+            const start = (studentCurrentPage.value - 1) * perPage;
+            return students.value.slice(start, start + perPage);
+        });
+
+        const totalStudentPages = computed(() => {
+            if (studentPerPage.value === 'all' || !studentPerPage.value || students.value.length === 0) return 1;
+            return Math.ceil(students.value.length / Number(studentPerPage.value));
+        });
+
+        const studentStartItem = computed(() => {
+            if (students.value.length === 0) return 0;
+            if (studentPerPage.value === 'all') return 1;
+            return (studentCurrentPage.value - 1) * Number(studentPerPage.value) + 1;
+        });
+
+        const studentEndItem = computed(() => {
+            if (studentPerPage.value === 'all') return students.value.length;
+            return Math.min(studentCurrentPage.value * Number(studentPerPage.value), students.length);
+        });
+
+        const kasPerPage = ref(20);
+        const kasCurrentPage = ref(1);
+
+        const paginatedKasBooks = computed(() => {
+            if (kasPerPage.value === 'all' || !kasPerPage.value) return kasBooks.value;
+            const perPage = Number(kasPerPage.value);
+            const start = (kasCurrentPage.value - 1) * perPage;
+            return kasBooks.value.slice(start, start + perPage);
+        });
+
+        const totalKasPages = computed(() => {
+            if (kasPerPage.value === 'all' || !kasPerPage.value || kasBooks.value.length === 0) return 1;
+            return Math.ceil(kasBooks.value.length / Number(kasPerPage.value));
+        });
+
+        const kasStartItem = computed(() => {
+            if (kasBooks.value.length === 0) return 0;
+            if (kasPerPage.value === 'all') return 1;
+            return (kasCurrentPage.value - 1) * Number(kasPerPage.value) + 1;
+        });
+
+        const kasEndItem = computed(() => {
+            if (kasPerPage.value === 'all') return kasBooks.value.length;
+            return Math.min(kasCurrentPage.value * Number(kasPerPage.value), kasBooks.value.length);
+        });
+
+        const getPageNumbers = (current, total) => {
+            let pages = [];
+            if (total <= 7) {
+                for (let i = 1; i <= total; i++) pages.push(i);
+            } else {
+                if (current <= 4) {
+                    pages = [1, 2, 3, 4, 5, '...', total];
+                } else if (current >= total - 3) {
+                    pages = [1, '...', total - 4, total - 3, total - 2, total - 1, total];
+                } else {
+                    pages = [1, '...', current - 1, current, current + 1, '...', total];
+                }
+            }
+            return pages;
+        };
+
+        watch(txPerPage, () => { txCurrentPage.value = 1; });
+        watch(studentPerPage, () => { studentCurrentPage.value = 1; });
+        watch(kasPerPage, () => { kasCurrentPage.value = 1; });
 
         // ─────────── Forms ───────────
         const kasForm = reactive({ name: '', model_type: 1 });
@@ -304,8 +413,13 @@ createApp({
         const saveTransaction = async () => {
             if (!form.description.trim()) { toast('Keterangan wajib diisi!', 'warning'); return; }
             const kasVal   = parseFormatted(form.kas_formatted);
-            const ikromVal = parseFormatted(form.ikrom_formatted);
-            if (kasVal + ikromVal <= 0) { toast('Isi nominal Kas atau Ikrom terlebih dahulu', 'warning'); return; }
+            const isModel1 = selectedKas.value.model_type === 1;
+            const ikromVal = isModel1 ? parseFormatted(form.ikrom_formatted) : 0;
+            if (isModel1) {
+                if (kasVal + ikromVal <= 0) { toast('Isi nominal Kas atau Ikrom terlebih dahulu', 'warning'); return; }
+            } else {
+                if (kasVal <= 0) { toast('Isi nominal Kas terlebih dahulu', 'warning'); return; }
+            }
 
             const payload = {
                 kas_id: selectedKas.value.id,
@@ -313,8 +427,8 @@ createApp({
                 description: form.description.trim(),
                 kas_in:    form.type === 'in'  ? kasVal  : 0,
                 kas_out:   form.type === 'out' ? kasVal  : 0,
-                ikrom_in:  form.type === 'in'  ? ikromVal : 0,
-                ikrom_out: form.type === 'out' ? ikromVal : 0,
+                ikrom_in:  isModel1 && form.type === 'in'  ? ikromVal : 0,
+                ikrom_out: isModel1 && form.type === 'out' ? ikromVal : 0,
             };
 
             try {
@@ -427,7 +541,12 @@ createApp({
         };
 
         const openPrintModal = () => { showPrintModal.value = true; };
-        const triggerPrint  = () => { window.print(); };
+        const triggerPrint = () => {
+            const origTitle = document.title;
+            document.title = '';
+            window.print();
+            setTimeout(() => { document.title = origTitle; }, 500);
+        };
 
         const toast = (msg, icon = 'info') => {
             Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2500, timerProgressBar: true })
@@ -533,6 +652,11 @@ createApp({
             selectKas, backToMenu,
             filterByStudent, exportCSV, seedDemoData, resetAllData,
             openPrintModal, triggerPrint,
+            // Pagination
+            txPerPage, txCurrentPage, paginatedTransactions, totalTxPages, txStartItem, txEndItem,
+            studentPerPage, studentCurrentPage, paginatedStudents, totalStudentPages, studentStartItem, studentEndItem,
+            kasPerPage, kasCurrentPage, paginatedKasBooks, totalKasPages, kasStartItem, kasEndItem,
+            getPageNumbers,
         };
     }
 }).mount('#app');
